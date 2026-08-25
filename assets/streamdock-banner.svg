@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d0e12" />
+      <stop offset="50%" stop-color="#141721" />
+      <stop offset="100%" stop-color="#0a0b0e" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff0033" />
+      <stop offset="100%" stop-color="#ff4b2b" />
+    </linearGradient>
+    <linearGradient id="prGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9999ff" />
+      <stop offset="100%" stop-color="#00005b" />
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#222736" />
+      <stop offset="100%" stop-color="#181a24" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="25" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="420" fill="url(#bgGrad)" />
+  
+  <!-- Subtle decorative grid & glowing orbs -->
+  <circle cx="150" cy="80" r="180" fill="#ff0033" opacity="0.08" filter="url(#glow)" />
+  <circle cx="1050" cy="320" r="220" fill="#0078d4" opacity="0.08" filter="url(#glow)" />
+
+  <!-- Grid pattern overlay -->
+  <g opacity="0.05" stroke="#ffffff" stroke-width="1">
+    <line x1="0" y1="70" x2="1200" y2="70" />
+    <line x1="0" y1="140" x2="1200" y2="140" />
+    <line x1="0" y1="210" x2="1200" y2="210" />
+    <line x1="0" y1="280" x2="1200" y2="280" />
+    <line x1="0" y1="350" x2="1200" y2="350" />
+    <line x1="150" y1="0" x2="150" y2="420" />
+    <line x1="300" y1="0" x2="300" y2="420" />
+    <line x1="450" y1="0" x2="450" y2="420" />
+    <line x1="600" y1="0" x2="600" y2="420" />
+    <line x1="750" y1="0" x2="750" y2="420" />
+    <line x1="900" y1="0" x2="900" y2="420" />
+    <line x1="1050" y1="0" x2="1050" y2="420" />
+  </g>
+
+  <!-- Left Hero Content -->
+  <g transform="translate(80, 85)">
+    <!-- Badge -->
+    <rect width="215" height="30" rx="15" fill="#ff0033" fill-opacity="0.15" stroke="#ff0033" stroke-opacity="0.3" stroke-width="1" />
+    <circle cx="15" cy="15" r="4" fill="#ff0033" />
+    <text x="28" y="19" fill="#ff4b4b" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700" letter-spacing="1">ADOBE PREMIERE PRO CEP</text>
+
+    <!-- Main Title -->
+    <text x="0" y="82" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="54" font-weight="900" letter-spacing="-1">Stream<tspan fill="url(#accentGrad)">Dock</tspan></text>
+
+    <!-- Subtitle -->
+    <text x="0" y="122" fill="#a0a5b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="400">Integrated YouTube Search, Live Preview &amp; 1-Click Importer</text>
+
+    <!-- Feature Pills -->
+    <g transform="translate(0, 160)">
+      <!-- Pill 1 -->
+      <rect x="0" y="0" width="135" height="34" rx="6" fill="#1b1f2e" stroke="#2c3247" stroke-width="1"/>
+      <text x="14" y="21" fill="#70a6ff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="600">⚡ 4K / 8K Video</text>
+
+      <!-- Pill 2 -->
+      <rect x="145" y="0" width="145" height="34" rx="6" fill="#1b1f2e" stroke="#2c3247" stroke-width="1"/>
+      <text x="159" y="21" fill="#2ecc71" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="600">🎵 Lossless Audio</text>
+
+      <!-- Pill 3 -->
+      <rect x="300" y="0" width="150" height="34" rx="6" fill="#1b1f2e" stroke="#2c3247" stroke-width="1"/>
+      <text x="314" y="21" fill="#e056fd" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="600">🎬 Auto Bin Import</text>
+    </g>
+  </g>
+
+  <!-- Right UI Preview Mockup Card -->
+  <g transform="translate(680, 50)" filter="url(#cardShadow)">
+    <rect width="450" height="320" rx="12" fill="url(#cardGrad)" stroke="#2f354d" stroke-width="1.5" />
+
+    <!-- Window Header -->
+    <path d="M 0 12 C 0 5.37 5.37 0 12 0 L 438 0 C 444.63 0 450 5.37 450 12 L 450 38 L 0 38 Z" fill="#151722" />
+    <circle cx="20" cy="19" r="5" fill="#ff5f56" />
+    <circle cx="36" cy="19" r="5" fill="#ffbd2e" />
+    <circle cx="52" cy="19" r="5" fill="#27c93f" />
+    <text x="225" y="23" fill="#8b92a8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" text-anchor="middle">StreamDock Panel — Premiere Pro</text>
+
+    <!-- Search Bar Mockup -->
+    <g transform="translate(20, 52)">
+      <rect width="410" height="32" rx="6" fill="#0e1017" stroke="#25293d" stroke-width="1" />
+      <circle cx="16" cy="16" r="5" fill="none" stroke="#606782" stroke-width="1.5" />
+      <line x1="20" y1="20" x2="25" y2="25" stroke="#606782" stroke-width="1.5" stroke-linecap="round" />
+      <text x="35" y="20" fill="#f0f2f8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11">4k cinematic b-roll landscape...</text>
+    </g>
+
+    <!-- Video Card 1 -->
+    <g transform="translate(20, 96)">
+      <rect width="195" height="150" rx="8" fill="#13151f" stroke="#232738" stroke-width="1" />
+      <!-- Thumbnail with gradient -->
+      <rect x="0" y="0" width="195" height="95" rx="8" fill="#1e2233" />
+      <rect x="145" y="74" width="42" height="16" rx="3" fill="#000000" fill-opacity="0.8" />
+      <text x="166" y="86" fill="#ffffff" font-family="sans-serif" font-size="9" font-weight="700" text-anchor="middle">03:45</text>
+      <!-- Title & Channel -->
+      <text x="10" y="114" fill="#ffffff" font-family="sans-serif" font-size="11" font-weight="600">Iceland 4K Drone B-Roll</text>
+      <text x="10" y="130" fill="#757c96" font-family="sans-serif" font-size="9.5">Nature Studio • 1.2M views</text>
+      <rect x="10" y="137" width="48" height="6" rx="3" fill="#ff0033" fill-opacity="0.6"/>
+    </g>
+
+    <!-- Video Card 2 -->
+    <g transform="translate(235, 96)">
+      <rect width="195" height="150" rx="8" fill="#13151f" stroke="#232738" stroke-width="1" />
+      <!-- Thumbnail -->
+      <rect x="0" y="0" width="195" height="95" rx="8" fill="#2a1f2e" />
+      <rect x="145" y="74" width="42" height="16" rx="3" fill="#000000" fill-opacity="0.8" />
+      <text x="166" y="86" fill="#ffffff" font-family="sans-serif" font-size="9" font-weight="700" text-anchor="middle">02:18</text>
+      <!-- Title & Channel -->
+      <text x="10" y="114" fill="#ffffff" font-family="sans-serif" font-size="11" font-weight="600">Cinematic Trailer Impact</text>
+      <text x="10" y="130" fill="#757c96" font-family="sans-serif" font-size="9.5">Sound FX Pro • 450K views</text>
+      <rect x="10" y="137" width="55" height="6" rx="3" fill="#2ecc71" fill-opacity="0.6"/>
+    </g>
+
+    <!-- Bottom Action Bar -->
+    <g transform="translate(20, 260)">
+      <rect width="410" height="42" rx="6" fill="#161924" stroke="#25293d" stroke-width="1" />
+      <text x="14" y="25" fill="#a0a5b8" font-family="sans-serif" font-size="11">Selected: <tspan fill="#ffffff" font-weight="600">1080p Full HD (H.264)</tspan></text>
+      <rect x="285" y="7" width="115" height="28" rx="4" fill="url(#accentGrad)" />
+      <text x="342" y="25" fill="#ffffff" font-family="sans-serif" font-size="11" font-weight="700" text-anchor="middle">⬇ Import to Bin</text>
+    </g>
+  </g>
+</svg>
