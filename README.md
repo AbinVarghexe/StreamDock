@@ -15,10 +15,10 @@
   </p>
 
   <p align="center">
+    <a href="#-proof-of-work--ui-showcase"><strong>📸 Proof of Work</strong></a> •
     <a href="#-quick-installation-for-users"><strong>⚡ 1-Click Install</strong></a> •
     <a href="#-core-features"><strong>✨ Features</strong></a> •
     <a href="#-architecture--pipeline"><strong>🏗️ Architecture</strong></a> •
-    <a href="#-proof-of-work--key-problem-solutions"><strong>🔬 Technical Proof</strong></a> •
     <a href="#-troubleshooting--faq"><strong>❓ FAQ</strong></a>
   </p>
 
@@ -26,9 +26,55 @@
 
 ---
 
+## 📸 Proof of Work & UI Showcase
+
+### 🎬 Live Adobe Premiere Pro Workspace
+
+<div align="center">
+  <img src="assets/streamdock-premiere-workspace.png" alt="StreamDock Running in Premiere Pro Workspace" width="100%" />
+  <p><em>StreamDock panel docked inside Adobe Premiere Pro alongside the Program Monitor and active Sequence Timeline.</em></p>
+</div>
+
+<br/>
+
+### 📱 In-Panel Views & Engine Status
+
+<div align="center">
+  <table>
+    <thead>
+      <tr>
+        <th align="center" width="33.33%">🔍 Search &amp; Discovery</th>
+        <th align="center" width="33.33%">📥 Automated Downloads</th>
+        <th align="center" width="33.33%">⚙️ Engine &amp; Binary Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td align="center" valign="top">
+          <img src="assets/streamdock-search-view.png" alt="YouTube Media Search View" width="100%" />
+          <br/><br/>
+          <sub>Filter chips, thumbnail previews, direct MP4 preview &amp; download triggers</sub>
+        </td>
+        <td align="center" valign="top">
+          <img src="assets/streamdock-downloads-view.png" alt="Active &amp; Completed Downloads" width="100%" />
+          <br/><br/>
+          <sub>Real-time download progress, "Ready in Premiere" badge &amp; Bin re-import</sub>
+        </td>
+        <td align="center" valign="top">
+          <img src="assets/streamdock-settings-view.png" alt="Settings &amp; Binary Engine Status" width="100%" />
+          <br/><br/>
+          <sub>Live verification of active yt-dlp &amp; operational FFmpeg media transcoder</sub>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+---
+
 ## 🌟 Overview
 
-**StreamDock** eliminates the tedious workflow of switching between web browsers, sketchy downloader tools, and file explorers. It embeds a complete YouTube browsing, real-time previewing, format transcoding, and bin-importing engine directly inside your Premiere Pro editing workspace.
+**StreamDock** eliminates the tedious workflow of switching between web browsers, unreliable online downloaders, and file explorers. It embeds a complete YouTube browsing, real-time previewing, format transcoding, and bin-importing engine directly inside your Premiere Pro workspace.
 
 ```
                     ┌─────────────────────────┐
@@ -48,8 +94,8 @@
 
 1. Download **[`StreamDock-v1.0.0-Premiere-Pro-Extension.zip`](https://github.com/AbinVarghexe/StreamDock/releases/download/v1.0.0/StreamDock-v1.0.0-Premiere-Pro-Extension.zip)** from GitHub Releases.
 2. Extract the `.zip` file.
-3. Double-click **`INSTALL.bat`** *(enables Adobe CEP debug mode in Windows registry and deploys files automatically)*.
-4. Launch (or restart) **Adobe Premiere Pro**.
+3. Double-click **`INSTALL.bat`** *(automatically enables Adobe CEP debug mode in Windows registry and deploys extension files)*.
+4. Open (or restart) **Adobe Premiere Pro**.
 5. Go to the top menu:
    ```text
    Window ➔ Extensions ➔ StreamDock
@@ -62,7 +108,7 @@
 <details>
 <summary><strong>Click to view manual installation steps</strong></summary>
 
-#### Step 1: Copy to Adobe CEP Extensions Folder
+#### Step 1: Copy Files to the Adobe CEP Extensions Folder
 Place the `com.streamdock.youtube.downloader` folder into:
 
 - **Windows**:
@@ -92,7 +138,7 @@ Place the `com.streamdock.youtube.downloader` folder into:
 
 | Feature | Description | Benefit |
 | :--- | :--- | :--- |
-| **🔍 InnerTube Search** | Fast metadata extraction directly via YouTube's internal API. | No YouTube API keys or rate limits required. |
+| **🔍 InnerTube Search** | Fast metadata extraction directly via YouTube's internal API. | No YouTube API keys or quota limits required. |
 | **⚡ Dual Preview Engine** | Dynamic HTTP bridge (`127.0.0.1`) + direct stream piping. | Completely bypasses YouTube **Error 153** and embed blocks. |
 | **🎞️ Smart Transcoding** | Forces Premiere-compatible **H.264 (AVC1)** & **AAC (mp4a)** codecs. | Prevents Premiere's *"Unsupported compression type 'av01'"* error. |
 | **🎵 Lossless Audio** | Dedicated audio extraction to **MP3 (320kbps)**, **WAV**, and **AAC**. | Instant SFX and soundtrack import for sound designers. |
@@ -111,7 +157,7 @@ Place the `com.streamdock.youtube.downloader` folder into:
 
 1. **Frontend CEP Panel (`index.html`, `css/main.css`, `js/app.js`)**:
    - Modern, responsive dark-themed user interface matching Premiere Pro CC design guidelines.
-   - Live search debounce, chip filters, tab switching, and modal controls.
+   - Live search debounce, preset filter chips, tab switching, and modal controls.
 2. **Local HTTP Bridge Server (`js/preview-server.js`)**:
    - Spawns a loopback server on a dynamic port (`http://127.0.0.1:<port>`).
    - Serves an embedded IFrame with cross-origin headers to eliminate Error 153.
@@ -125,29 +171,6 @@ Place the `com.streamdock.youtube.downloader` folder into:
 
 ---
 
-## 🔬 Technical Proof & Solved Challenges
-
-### 1. Eliminating Premiere Pro AV1 Codec Import Failures
-YouTube frequently serves high-resolution videos in AV1 (`av01`) or VP9 codecs, which trigger import errors in Adobe Premiere Pro:
-
-<div align="center">
-  <img src="assets/screenshot-preview-stuck.png" alt="AV1 Codec Error in Premiere Pro" width="500px" />
-  <p><em>Before: Premiere Pro rejecting raw YouTube AV1 video downloads.</em></p>
-</div>
-
-**StreamDock Solution**: StreamDock's candidate selection engine filters format streams and applies fallback transcode rules via FFmpeg to guarantee every video downloaded is standard **H.264 AVC1 + AAC Audio** that imports smoothly.
-
----
-
-### 2. Solving YouTube Embed Restriction (Error 101, 150 & Silent Blocks)
-Music labels and VEVO channels restrict web embedding, causing standard iframe players to get stuck on thumbnails without playing.
-
-**StreamDock Solution**: 
-- Detects embed restriction via the bridge's postMessage protocol.
-- Provides a dedicated **`▶ yt-dlp Stream`** fallback pipeline that spawns a real-time MP4 pipe (`android,mweb` player clients) to stream video chunks directly through local HTTP proxy into the HTML5 video element.
-
----
-
 ## 📁 Repository Structure
 
 ```text
@@ -156,7 +179,11 @@ StreamDock/
 │   └── manifest.xml                     # Extension manifest, permissions & Premiere host target
 ├── assets/
 │   ├── streamdock-banner.svg            # Hero banner illustration
-│   └── streamdock-workflow.svg          # System architecture flowchart
+│   ├── streamdock-workflow.svg          # System architecture flowchart
+│   ├── streamdock-premiere-workspace.png # Landscape proof of work (Premiere Pro workspace)
+│   ├── streamdock-search-view.png       # Search panel view screenshot
+│   ├── streamdock-downloads-view.png    # Downloads panel view screenshot
+│   └── streamdock-settings-view.png     # Settings & engine status screenshot
 ├── binaries/
 │   └── release.json                     # Media engine version metadata
 ├── css/
