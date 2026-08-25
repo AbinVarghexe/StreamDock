@@ -1,0 +1,18 @@
+{
+  "updatedAt": "2026-08-25T15:00:00.000Z",
+  "releases": {
+    "ytDlp": {
+      "version": "2025.02.19",
+      "win32-x64": {
+        "fileName": "yt-dlp.exe",
+        "url": "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe"
+      }
+    },
+    "ffmpeg": {
+      "version": "6.1.1",
+      "win32-x64": {
+        "url": "https://github.com/GyanD/codexffmpeg/releases/download/6.1.1/ffmpeg-6.1.1-essentials_build.zip"
+      }
+    }
+  }
+}

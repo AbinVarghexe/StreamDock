@@ -1,0 +1,300 @@
+/**
+ * preview-server.js
+ * StreamDock Local HTTP Preview Bridge & Streaming Server.
+ *
+ * Routes:
+ * 1. /youtube-preview?videoId=<id>
+ *    Serves YouTube IFrame embed inside a local loopback origin (127.0.0.1:port)
+ *    with strict-origin-when-cross-origin headers to eliminate Error 153.
+ *
+ * 2. /stream?videoId=<id>
+ *    Streams video directly from yt-dlp's internal engine to the browser <video>
+ *    tag via an MP4 pipe (using android/mweb player clients). This completely
+ *    bypasses 403 Forbidden errors on googlevideo.com URLs and plays all videos
+ *    including VEVO, music videos, and embedding-restricted content.
+ */
+
+const http = require('http');
+const { spawn } = require('child_process');
+const { URL } = require('url');
+
+let previewBridgeServer = null;
+let previewBridgeOrigin = '';
+
+// Active streaming processes: videoId -> child_process
+const activeStreamProcesses = new Map();
+
+function isValidYouTubeVideoId(videoId) {
+  return /^[A-Za-z0-9_-]{11}$/.test(String(videoId || ''));
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function escapeJavaScriptString(value) {
+  return String(value || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n')
+    .replace(/</g, '\\x3c');
+}
+
+function getYtDlpPath() {
+  try {
+    const bm = require('./binary-manager');
+    return bm.getYtDlpPath();
+  } catch (e) {
+    return 'yt-dlp';
+  }
+}
+
+function sendResponse(response, statusCode, contentType, body) {
+  response.writeHead(statusCode, {
+    'Content-Type': contentType,
+    'Cache-Control': 'no-store, max-age=0',
+    'Access-Control-Allow-Origin': '*'
+  });
+  response.end(body);
+}
+
+// ─── Direct yt-dlp MP4 Stream Pipeline ────────────────────────────────────────
+
+function handleDirectStreamRequest(request, response, videoId) {
+  const ytDlpPath = getYtDlpPath();
+  const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+  // Kill any previous stream for this videoId to avoid duplicate bandwidth
+  if (activeStreamProcesses.has(videoId)) {
+    try {
+      activeStreamProcesses.get(videoId).kill();
+    } catch (e) {}
+    activeStreamProcesses.delete(videoId);
+  }
+
+  response.writeHead(200, {
+    'Content-Type': 'video/mp4',
+    'Access-Control-Allow-Origin': '*',
+    'Cache-Control': 'no-cache, no-store',
+    'Connection': 'keep-alive'
+  });
+
+  const args = [
+    '--no-playlist',
+    '--no-warnings',
+    '--quiet',
+    '--extractor-args', 'youtube:player_client=android,mweb',
+    '-f', '18/b/ba/best[ext=mp4]/best',
+    '-o', '-',
+    ytUrl
+  ];
+
+  console.log(`[StreamDock] Starting direct stream pipe for ${videoId}...`);
+  const proc = spawn(ytDlpPath, args, { windowsHide: true });
+  activeStreamProcesses.set(videoId, proc);
+
+  proc.stdout.pipe(response);
+
+  proc.stderr.on('data', (data) => {
+    const msg = data.toString().trim();
+    if (msg) {
+      console.warn(`[StreamDock yt-dlp pipe ${videoId}]:`, msg);
+    }
+  });
+
+  proc.on('close', (code) => {
+    activeStreamProcesses.delete(videoId);
+    if (!response.writableEnded) {
+      response.end();
+    }
+  });
+
+  proc.on('error', (err) => {
+    activeStreamProcesses.delete(videoId);
+    console.error(`[StreamDock yt-dlp spawn error ${videoId}]:`, err);
+    if (!response.headersSent) {
+      sendResponse(response, 500, 'text/plain', 'Stream error: ' + err.message);
+    } else {
+      response.destroy();
+    }
+  });
+
+  // When client disconnects / modal closes / switches video, kill the child process immediately
+  request.on('close', () => {
+    if (activeStreamProcesses.get(videoId) === proc) {
+      try {
+        proc.kill();
+      } catch (e) {}
+      activeStreamProcesses.delete(videoId);
+    }
+  });
+}
+
+// ─── Bridge HTML for YouTube IFrame Embed ────────────────────────────────────
+
+function buildYouTubeEmbedUrl(videoId, embedOrigin) {
+  const params = [
+    'autoplay=1',
+    'controls=1',
+    'enablejsapi=1',
+    'iv_load_policy=3',
+    'modestbranding=1',
+    'rel=0',
+    'playsinline=1'
+  ];
+
+  if (embedOrigin) {
+    params.push('origin=' + encodeURIComponent(embedOrigin));
+    params.push('widget_referrer=' + encodeURIComponent(embedOrigin));
+  }
+
+  return 'https://www.youtube.com/embed/' + encodeURIComponent(videoId) + '?' + params.join('&');
+}
+
+function buildPreviewBridgeHtml(videoId) {
+  const embedUrl = buildYouTubeEmbedUrl(videoId, previewBridgeOrigin);
+  const scriptVideoId = escapeJavaScriptString(videoId);
+
+  return '<!doctype html>' +
+    '<html><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+    '<style>html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden}iframe{display:block;width:100%;height:100%;border:0}</style>' +
+    '</head><body>' +
+    '<iframe id="sidestream-youtube-player" src="' + escapeHtml(embedUrl) + '" ' +
+    'allow="autoplay; encrypted-media; picture-in-picture; web-share; fullscreen" ' +
+    'referrerpolicy="strict-origin-when-cross-origin"></iframe>' +
+    '<script>' +
+    '(function(){' +
+    'var videoId="' + scriptVideoId + '";' +
+    'var player=null;var stateTimer=null;var apiTimeoutId=null;var playerReady=false;' +
+    'function send(type,details){try{parent.postMessage({sidestreamPreview:"youtube_embed",type:type,videoId:videoId,details:details||{}},"*");}catch(e){}}' +
+    'function safeNumber(v){var n=Number(v);return isFinite(n)&&n>=0?n:0;}' +
+    'function collectState(){' +
+    'var d={playerState:-1,currentTime:0,duration:0,loadedFraction:0};' +
+    'try{if(!player)return d;' +
+    'if(typeof player.getPlayerState==="function")d.playerState=Number(player.getPlayerState());' +
+    'if(typeof player.getCurrentTime==="function")d.currentTime=safeNumber(player.getCurrentTime());' +
+    'if(typeof player.getDuration==="function")d.duration=safeNumber(player.getDuration());' +
+    'if(typeof player.getVideoLoadedFraction==="function")d.loadedFraction=Math.max(0,Math.min(Number(player.getVideoLoadedFraction())||0,1));' +
+    '}catch(e){}return d;}' +
+    'function sendState(){send("state",collectState());}' +
+    'function startStateTimer(){if(stateTimer)return;stateTimer=window.setInterval(sendState,250);}' +
+    'function clearApiTimeout(){if(!apiTimeoutId)return;window.clearTimeout(apiTimeoutId);apiTimeoutId=null;}' +
+    'window.onYouTubeIframeAPIReady=function(){' +
+    'try{' +
+    'player=new YT.Player("sidestream-youtube-player",{' +
+    'events:{' +
+    'onReady:function(){playerReady=true;clearApiTimeout();send("ready",collectState());startStateTimer();sendState();},' +
+    'onStateChange:function(){sendState();},' +
+    'onError:function(event){clearApiTimeout();send("error",{code:event.data});}' +
+    '}});' +
+    '}catch(e){clearApiTimeout();send("api_error",{message:e&&e.message?e.message:String(e)});}' +
+    '};' +
+    'window.addEventListener("message",function(event){' +
+    'var data=event&&event.data?event.data:null;' +
+    'if(!data||data.sidestreamPreviewCommand!=="youtube_embed"||data.videoId!==videoId)return;' +
+    'if(data.command==="requestState"){sendState();return;}' +
+    'try{if(player&&typeof player[data.command]==="function")player[data.command].apply(player,data.args||[]);}catch(e){}' +
+    '});' +
+    'apiTimeoutId=window.setTimeout(function(){if(playerReady)return;send("api_timeout",{});},8000);' +
+    '})();' +
+    '</script>' +
+    '<script src="https://www.youtube.com/iframe_api"></script>' +
+    '</body></html>';
+}
+
+// ─── Request Handler ─────────────────────────────────────────────────────────
+
+function handleRequest(request, response) {
+  let requestUrl;
+  try {
+    requestUrl = new URL(request.url, previewBridgeOrigin || 'http://127.0.0.1');
+  } catch (e) {
+    sendResponse(response, 400, 'text/plain', 'Bad request');
+    return;
+  }
+
+  const pathname = requestUrl.pathname;
+
+  // Route: /youtube-preview?videoId=<id>
+  if (pathname === '/youtube-preview') {
+    const videoId = requestUrl.searchParams.get('videoId') || '';
+    if (!isValidYouTubeVideoId(videoId)) {
+      sendResponse(response, 400, 'text/plain', 'Invalid video id');
+      return;
+    }
+    sendResponse(response, 200, 'text/html; charset=utf-8', buildPreviewBridgeHtml(videoId));
+    return;
+  }
+
+  // Route: /stream?videoId=<id> (Direct yt-dlp piped MP4 stream)
+  if (pathname === '/stream') {
+    const videoId = requestUrl.searchParams.get('videoId') || '';
+    if (!isValidYouTubeVideoId(videoId)) {
+      sendResponse(response, 400, 'text/plain', 'Invalid video id');
+      return;
+    }
+    handleDirectStreamRequest(request, response, videoId);
+    return;
+  }
+
+  sendResponse(response, 404, 'text/plain', 'Not found');
+}
+
+// ─── Server Lifecycle ────────────────────────────────────────────────────────
+
+function startPreviewBridgeServer() {
+  if (previewBridgeServer) {
+    return Promise.resolve(previewBridgeOrigin);
+  }
+
+  return new Promise((resolve) => {
+    previewBridgeServer = http.createServer(handleRequest);
+
+    previewBridgeServer.on('error', (err) => {
+      console.warn('Preview bridge server error:', err);
+      resolve('');
+    });
+
+    previewBridgeServer.listen(0, '127.0.0.1', () => {
+      const address = previewBridgeServer.address();
+      if (address && address.port) {
+        previewBridgeOrigin = 'http://127.0.0.1:' + address.port;
+        console.log('StreamDock Preview Bridge active on:', previewBridgeOrigin);
+      }
+      resolve(previewBridgeOrigin);
+    });
+  });
+}
+
+// ─── Public API ──────────────────────────────────────────────────────────────
+
+function getPreviewUrl(videoId) {
+  if (previewBridgeOrigin && isValidYouTubeVideoId(videoId)) {
+    return previewBridgeOrigin + '/youtube-preview?videoId=' + encodeURIComponent(videoId);
+  }
+  return 'https://www.youtube.com/embed/' + encodeURIComponent(videoId) + '?autoplay=1&enablejsapi=1&rel=0&playsinline=1';
+}
+
+function getProxiedStreamUrl(videoId) {
+  if (previewBridgeOrigin && isValidYouTubeVideoId(videoId)) {
+    return previewBridgeOrigin + '/stream?videoId=' + encodeURIComponent(videoId);
+  }
+  return null;
+}
+
+function getPreviewBridgeOrigin() {
+  return previewBridgeOrigin;
+}
+
+module.exports = {
+  startPreviewBridgeServer,
+  getPreviewUrl,
+  getProxiedStreamUrl,
+  getPreviewBridgeOrigin
+};

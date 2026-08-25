@@ -1,0 +1,21 @@
+{
+  "name": "streamdock-premiere-extension",
+  "version": "1.0.0",
+  "description": "Embedded YouTube Browser, Search and Media Downloader for Adobe Premiere Pro",
+  "main": "index.html",
+  "scripts": {
+    "download:binaries": "node scripts/download-binaries.js",
+    "deploy": "node scripts/install-staged-extension.js",
+    "package": "node scripts/package-extension.js"
+  },
+  "keywords": [
+    "premiere-pro",
+    "cep",
+    "adobe",
+    "youtube",
+    "downloader",
+    "video-editing"
+  ],
+  "author": "StreamDock",
+  "license": "MIT"
+}

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' data: blob: https: http:; 
+             script-src 'self' 'unsafe-inline' 'unsafe-eval';
+             frame-src https://www.youtube.com https://www.youtube-nocookie.com https://*.youtube.com http://127.0.0.1:* http://localhost:*;
+             img-src 'self' data: blob: https: http:;
+             connect-src 'self' https: http: http://127.0.0.1:* http://localhost:*;
+             style-src 'self' 'unsafe-inline';" />
+  <title>StreamDock - Premiere Pro Media Downloader</title>
+  <link rel="stylesheet" href="./css/main.css" />
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Top Header & Tabs -->
+    <header class="app-header">
+      <div class="brand-badge">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path>
+          <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="currentColor"></polygon>
+        </svg>
+        <span>StreamDock</span>
+      </div>
+
+      <nav class="header-tabs">
+        <button class="tab-btn active" data-tab="search">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <span>Search</span>
+        </button>
+
+        <button class="tab-btn" data-tab="downloads">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>Downloads</span>
+          <span id="badge-active-downloads" class="badge-count">0</span>
+        </button>
+
+        <button class="tab-btn" data-tab="settings">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </nav>
+    </header>
+
+    <!-- Search / Filter Section -->
+    <div id="search-section" class="search-section">
+      <div class="search-box-wrapper">
+        <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="search-input" class="search-input" placeholder="Search YouTube or paste video URL..." autocomplete="off" />
+        <button id="clear-search-btn" class="clear-search-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Quick Preset Chips -->
+      <div class="filter-chips">
+        <button class="chip active" data-query="4k cinematic b-roll">4K B-Roll</button>
+        <button class="chip" data-query="sound effects royalty free">Sound FX</button>
+        <button class="chip" data-query="lo-fi hip hop beat no copyright">Lo-Fi Beats</button>
+        <button class="chip" data-query="drone cinematic landscape 4k">Drone 4K</button>
+        <button class="chip" data-query="green screen memes overlay">Green Screen</button>
+        <button class="chip" data-query="cinematic trailer riser impact sfx">Impact SFX</button>
+      </div>
+    </div>
+
+    <!-- Main Views Container -->
+    <div class="view-container">
+
+      <!-- View: Search Results -->
+      <div id="view-search" class="view-page active">
+        <div id="search-spinner" class="spinner" style="display: none;"></div>
+        <div id="results-grid" class="results-grid"></div>
+        <div id="search-empty" class="empty-state">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <h3>Discover & Import Media</h3>
+          <p>Search millions of YouTube videos, sound effects, and music directly into Premiere Pro.</p>
+        </div>
+      </div>
+
+      <!-- View: Active & Completed Downloads -->
+      <div id="view-downloads" class="view-page">
+        <div id="downloads-list" class="downloads-list"></div>
+        <div id="downloads-empty" class="empty-state">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <h3>No Active Downloads</h3>
+          <p>Downloaded clips and audio will appear here with real-time transfer progress.</p>
+        </div>
+      </div>
+
+      <!-- View: Extension Settings -->
+      <div id="view-settings" class="view-page">
+        <div class="settings-section">
+          <div class="settings-heading">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span>Download Destination</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Save Folder</label>
+            <input type="text" id="setting-download-dir" class="form-input" placeholder="Premiere Pro Project Folder (Default)" />
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-heading">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+              <polyline points="2 17 12 22 22 17"></polyline>
+              <polyline points="2 12 12 17 22 12"></polyline>
+            </svg>
+            <span>Defaults & Premiere Automation</span>
+          </div>
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label class="form-label">Default Video Quality</label>
+            <select id="setting-default-quality" class="form-select">
+              <option value="best">Best Available (up to 4K / 8K)</option>
+              <option value="2160">4K (2160p)</option>
+              <option value="1440">2K (1440p)</option>
+              <option value="1080" selected>Full HD (1080p)</option>
+              <option value="720">HD (720p)</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label class="form-label">Default Audio Format</label>
+            <select id="setting-default-audio-format" class="form-select">
+              <option value="mp3" selected>MP3 (High Quality)</option>
+              <option value="wav">WAV (Lossless PCM)</option>
+              <option value="aac">AAC</option>
+            </select>
+          </div>
+          <label class="form-checkbox-row" style="margin-bottom: 8px;">
+            <input type="checkbox" id="setting-auto-import-bin" checked />
+            <span>Automatically import downloaded media into Premiere Bin</span>
+          </label>
+          <label class="form-checkbox-row">
+            <input type="checkbox" id="setting-auto-insert-timeline" />
+            <span>Automatically insert imported clip onto Timeline playhead</span>
+          </label>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-heading">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+              <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+              <line x1="6" y1="6" x2="6.01" y2="6"></line>
+              <line x1="6" y1="18" x2="6.01" y2="18"></line>
+            </svg>
+            <span>Engine & Binary Status</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span>yt-dlp Engine:</span>
+              <span id="status-ytdlp" class="status-pill success">Checking...</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span>FFmpeg / Transcoder:</span>
+              <span id="status-ffmpeg" class="status-pill success">Checking...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Video Preview & Download Modal -->
+    <div id="preview-modal" class="modal-overlay">
+      <div class="modal-card">
+        <div class="modal-header">
+          <span id="modal-video-title" class="modal-title">Video Preview</span>
+          <div style="display: flex; align-items: center; gap: 8px; margin-left: auto; margin-right: 8px;">
+            <button id="modal-external-link-btn" class="modal-header-btn" title="Open in browser" style="padding: 3px 8px; font-size: 11px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+              <span>YouTube</span>
+            </button>
+            <button id="modal-switch-player-btn" class="modal-header-btn" title="Switch player mode" style="padding: 3px 8px; font-size: 11px;">
+              <span>Switch: Web Player</span>
+            </button>
+            <button id="modal-ytdlp-btn" class="modal-header-btn modal-ytdlp-btn" title="Play directly via yt-dlp (works for all videos including licensed/VEVO)" style="padding: 3px 10px; font-size: 11px;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="flex-shrink:0">
+                <polygon points="5,3 19,12 5,21"/>
+              </svg>
+              <span>yt-dlp Stream</span>
+            </button>
+          </div>
+          <button id="modal-close-btn" class="modal-close-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="modal-player-wrap" id="modal-player-wrap">
+          <!-- YouTube Web Player Mode (Default for Long Videos) -->
+          <iframe id="modal-iframe" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"></iframe>
+          
+          <!-- Native Direct Stream Mode -->
+          <video id="modal-video-player" class="modal-video-player" controls playsinline style="display: none;"></video>
+          
+          <div id="modal-player-loading" class="modal-player-loading">
+            <div class="spinner"></div>
+            <span>Fetching stream via yt-dlp...</span>
+          </div>
+
+          <!-- Shown when embed is stuck (licensed/VEVO videos) -->
+          <div id="modal-embed-stuck-banner" class="modal-embed-stuck-banner" style="display:none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span>Video blocked from embedding?</span>
+            <button id="modal-embed-stuck-play-btn" class="btn-ytdlp-fallback">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5,3 19,12 5,21"/></svg>
+              Play with yt-dlp
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Download Type</label>
+            <select id="modal-format-type" class="form-select">
+              <option value="video">Video (with Audio)</option>
+              <option value="audio">Audio Only (Extract)</option>
+            </select>
+          </div>
+
+          <div id="modal-quality-group" class="form-group">
+            <label class="form-label">Video Resolution</label>
+            <select id="modal-quality-select" class="form-select">
+              <option value="best">Highest Available (up to 4K)</option>
+              <option value="2160">4K (2160p)</option>
+              <option value="1440">1440p (2K)</option>
+              <option value="1080" selected>1080p (Full HD)</option>
+              <option value="720">720p (HD)</option>
+              <option value="480">480p</option>
+            </select>
+          </div>
+
+          <div id="modal-audio-format-group" class="form-group" style="display: none;">
+            <label class="form-label">Audio Format</label>
+            <select id="modal-audio-format-select" class="form-select">
+              <option value="mp3" selected>MP3 (320 kbps)</option>
+              <option value="wav">WAV (Lossless PCM)</option>
+              <option value="aac">AAC</option>
+            </select>
+          </div>
+
+          <label class="form-checkbox-row">
+            <input type="checkbox" id="modal-add-to-timeline" />
+            <span>Insert to timeline at playhead when ready</span>
+          </label>
+        </div>
+
+        <div class="modal-footer">
+          <button id="modal-cancel-btn" class="card-btn" style="flex: initial; width: 80px;">Cancel</button>
+          <button id="modal-start-download-btn" class="card-btn primary" style="flex: initial; min-width: 140px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Download & Import</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="./lib/CSInterface.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>

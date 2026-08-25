@@ -1,0 +1,28 @@
+# Node & dependencies
+node_modules/
+package-lock.json
+
+# Built packages & archives (too large for git)
+dist/
+*.zip
+*.tar.gz
+
+# Bundled binaries (use scripts/download-binaries.js or GitHub Releases)
+binaries/*.exe
+binaries/*.old
+binaries/ffmpeg/
+!binaries/release.json
+
+# Downloaded media & temporary artifacts
+downloads/
+*.mp4
+*.part
+*.m4a
+*.mp3
+*.wav
+*.log
+
+# System & OS files
+.DS_Store
+Thumbs.db
+.system_generated/
