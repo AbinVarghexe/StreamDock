@@ -382,26 +382,11 @@ function downloadWithYtDlp(options, cancellation) {
       }
 
       if (code !== 0) {
-        // Auto-retry without browser cookies if DPAPI decryption failed
-        if (options.cookiesFromBrowser && (rawStderr.includes('DPAPI') || rawStderr.includes('Failed to decrypt with DPAPI'))) {
-          console.warn('[StreamDock] Windows DPAPI browser cookie extraction failed. Retrying download directly without browser cookies...');
-          const retryOptions = Object.assign({}, options, { cookiesFromBrowser: '' });
-          return downloadMedia(retryOptions).then(resolve).catch(reject);
-        }
-
-        // Format friendly error message
         let errMsg = rawStderr || rawStdout || `Exit code ${code}`;
-        if (errMsg.includes('Sign in to confirm you') || errMsg.includes('confirm you\'re not a bot') || errMsg.includes('Sign in to confirm')) {
-          errMsg = 'YouTube bot verification required for this video. Please try again shortly.';
-        } else if (errMsg.includes('login required') || errMsg.includes('Requested content is not available') || errMsg.includes('rate-limit reached')) {
+        if (errMsg.includes('login required') || errMsg.includes('Requested content is not available') || errMsg.includes('rate-limit reached')) {
           errMsg = 'Instagram authentication required for this Reel. You can save your account session in Settings.';
-        } else if (errMsg.includes('DPAPI') || errMsg.includes('Failed to decrypt with DPAPI') || errMsg.includes('Could not copy Chrome cookie database')) {
-          errMsg = 'Chrome/Edge on Windows blocked cookie decryption. You can save your account session in Settings.';
-        } else if (errMsg.includes('HTTP Error 403') || errMsg.includes('403: Forbidden')) {
-          errMsg = 'Access forbidden (403). Content might be geo-restricted or rate-limited.';
         }
-
-        return reject(new Error(errMsg));
+        return reject(new Error(`Download failed: ${errMsg}`));
       }
 
       // Determine the true resolved file path

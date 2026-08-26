@@ -586,7 +586,6 @@
         quality,
         audioFormat,
         destinationDir: destDir,
-        cookiesFromBrowser: state.settings.cookiesBrowser,
         onProgress: (p) => {
           downloadItem.percent = Math.round(p.percent);
           downloadItem.speed = p.speed;

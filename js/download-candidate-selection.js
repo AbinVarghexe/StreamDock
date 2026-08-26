@@ -44,20 +44,9 @@ function buildYtDlpDownloadArgs(url, options = {}) {
 
 
 
-  // Cookie precedence:
-  // 1. explicit cookiesFile
-  // 2. saved Instagram session file (if Instagram)
-  // 3. auto-detected cookies.txt in StreamDock AppData folder
-  // 4. cookiesFromBrowser
-  const autoCookiesPath = path.join(process.env.APPDATA || '.', 'StreamDock', 'cookies.txt');
-  if (options.cookiesFile) {
-    args.push('--cookies', options.cookiesFile);
-  } else if (isIg && sessionManager && sessionManager.hasInstagramSession()) {
+  // Cookies are ONLY used for Instagram authentication
+  if (isIg && sessionManager && sessionManager.hasInstagramSession()) {
     args.push('--cookies', sessionManager.getInstagramSessionFilePath());
-  } else if (!isIg && fs.existsSync(autoCookiesPath)) {
-    args.push('--cookies', autoCookiesPath);
-  } else if (cookiesFromBrowser) {
-    args.push('--cookies-from-browser', cookiesFromBrowser);
   }
 
   // Output filename template (e.g. %(title)s [%(id)s].%(ext)s)
