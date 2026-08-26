@@ -69,6 +69,17 @@ function installExtension() {
 
   // In-place copy to avoid locked directory issues
   copyDirectoryInPlace(SOURCE_DIR, targetExtensionDir);
+
+  // Clean up legacy nested binaries/ffmpeg folder if present
+  const legacyFfmpegDir = path.join(targetExtensionDir, 'binaries', 'ffmpeg');
+  if (fs.existsSync(legacyFfmpegDir)) {
+    try {
+      fs.rmSync(legacyFfmpegDir, { recursive: true, force: true });
+    } catch (e) {
+      // ignore
+    }
+  }
+
   console.log('✓ Successfully deployed extension files to CEP extensions folder!');
 
   enablePlayerDebugMode();
