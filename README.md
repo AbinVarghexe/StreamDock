@@ -11,13 +11,15 @@
   [![Release](https://img.shields.io/badge/Release-v2.0.0-E056FD?style=for-the-badge&logo=github)](https://github.com/AbinVarghexe/StreamDock/releases/tag/v2.0.0)
 
   <p align="center">
-    <strong>The high-speed, integrated YouTube &amp; Instagram Reel browser, video previewer, and media downloader built directly for Adobe Premiere Pro.</strong>
+    <strong>The ultimate high-speed YouTube browser &amp; Instagram Reel downloader built natively for Adobe Premiere Pro.</strong>
   </p>
 
   <p align="center">
-    <a href="#-proof-of-work--ui-showcase"><strong>📸 Proof of Work</strong></a> •
+    <a href="#-proof-of-work--ui-showcase"><strong>📸 Showcase</strong></a> •
+    <a href="#-whats-new-in-v200"><strong>🚀 What's New</strong></a> •
     <a href="#-quick-installation-for-users"><strong>⚡ 1-Click Install</strong></a> •
-    <a href="#-core-features"><strong>✨ Features</strong></a> •
+    <a href="#-features--capabilities"><strong>✨ Features</strong></a> •
+    <a href="#-user-guide"><strong>📖 User Guide</strong></a> •
     <a href="#-architecture--pipeline"><strong>🏗️ Architecture</strong></a> •
     <a href="#-troubleshooting--faq"><strong>❓ FAQ</strong></a>
   </p>
@@ -32,7 +34,7 @@
 
 <div align="center">
   <img src="assets/streamdock-premiere-workspace.png" alt="StreamDock Running in Premiere Pro Workspace" width="100%" />
-  <p><em>StreamDock panel docked inside Adobe Premiere Pro alongside the Program Monitor and active Sequence Timeline.</em></p>
+  <p><em>StreamDock panel docked inside Adobe Premiere Pro alongside the Program Monitor, Project Bins, and active Sequence Timeline.</em></p>
 </div>
 
 <br/>
@@ -51,19 +53,19 @@
     <tbody>
       <tr>
         <td align="center" valign="top">
-          <img src="assets/streamdock-search-view.png" alt="YouTube Media Search View" width="100%" />
+          <img src="assets/streamdock-search-view.png" alt="YouTube &amp; Instagram Media Search View" width="100%" />
           <br/><br/>
-          <sub>Filter chips, thumbnail previews, direct MP4 preview &amp; download triggers</sub>
+          <sub>InnerTube search, Instagram Reel paste, filter chips, video duration badges, and instant modal preview triggers</sub>
         </td>
         <td align="center" valign="top">
           <img src="assets/streamdock-downloads-view.png" alt="Active &amp; Completed Downloads" width="100%" />
           <br/><br/>
-          <sub>Real-time download progress, "Ready in Premiere" badge &amp; Bin re-import</sub>
+          <sub>Real-time progress bars, download speeds, ETA counters, "Ready in Premiere" indicators &amp; 1-click bin re-import</sub>
         </td>
         <td align="center" valign="top">
           <img src="assets/streamdock-settings-view.png" alt="Settings &amp; Binary Engine Status" width="100%" />
           <br/><br/>
-          <sub>Live verification of active yt-dlp &amp; operational FFmpeg media transcoder</sub>
+          <sub>Custom download directory selector, default quality/audio preferences, Instagram account session manager &amp; engine health status</sub>
         </td>
       </tr>
     </tbody>
@@ -72,18 +74,35 @@
 
 ---
 
+## 🚀 What's New in v2.0.0
+
+StreamDock 2.0 introduces first-class **Instagram Reels & Video** support alongside performance and stability upgrades:
+
+- **📷 Instagram Reels & Posts**: Paste any Instagram Reel (`/reel/`, `/p/`, `/tv/`) to download Full HD MP4 video directly into Premiere Pro.
+- **⚡ Direct CDN Streaming Engine**: Ultra-fast Instagram resolver that extracts high-bitrate MP4 streams directly from Instagram CDN with zero quality loss.
+- **🎬 Dual Preview Player with Auto-Looping**: In-panel video player supports both standard YouTube embeds and native looping direct playback for vertical Instagram Reels.
+- **🔐 Instagram Session Manager**: Dedicated session/cookie storage card in Settings to download age-restricted, high-traffic, or personal account Reels without browser DPAPI lock issues.
+- **🛡️ Isolated Media Pipelines**: YouTube downloads operate directly through native `yt-dlp` without requiring cookies or third-party tokens, keeping both platforms fully independent and reliable.
+- **🎯 Enhanced File Resolver**: Intelligent multi-stage media resolution that handles complex Unicode filenames, emojis, and non-ASCII titles seamlessly on Windows & macOS.
+
+---
+
 ## 🌟 Overview
 
-**StreamDock** eliminates the tedious workflow of switching between web browsers, unreliable online downloaders, and file explorers. It embeds a complete YouTube browsing, real-time previewing, format transcoding, and bin-importing engine directly inside your Premiere Pro workspace.
+**StreamDock** eliminates the friction of switching between web browsers, sketchy ad-filled download sites, and operating system file explorers. It embeds a complete YouTube browsing, Instagram scraping, real-time previewing, format transcoding, and bin-importing engine directly inside your Premiere Pro workspace.
 
 ```
-                    ┌─────────────────────────┐
-                    │    Adobe Premiere Pro   │
-                    │   ┌─────────────────┐   │
-  YouTube ─────────►│   │   StreamDock    │   │─────────► Project Bin / Timeline
-  (InnerTube API)   │   │  (CEP Extension)│   │           (H.264 AVC1 + AAC Audio)
-                    │   └─────────────────┘   │
-                    └─────────────────────────┘
+                      ┌────────────────────────────────────────────────────────┐
+                      │                   Adobe Premiere Pro                   │
+                      │                                                        │
+   YouTube Search ───►│   ┌────────────────────────────────────────────────┐   │
+   (InnerTube API)    │   │                   StreamDock                   │   │
+                      │   │                 (CEP Extension)                │   │────► Active Timeline Track
+   Instagram Reel ───►│   │  • Dual Preview Bridge (127.0.0.1)             │   │      (Auto-inserted at playhead)
+   (Direct Resolver)  │   │  • Premiere Transcoder (H.264 AVC1 + AAC)      │   │
+                      │   │  • ExtendScript Host Automation                │   │────► Project Bin
+                      │   └────────────────────────────────────────────────┘   │      ("StreamDock Downloads")
+                      └────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -134,18 +153,49 @@ Place the `com.streamdock.youtube.downloader` folder into:
 
 ---
 
-## ✨ Core Features
+## ✨ Features & Capabilities
 
-| Feature | Description | Benefit |
+| Feature | Details | Benefit for Editors |
 | :--- | :--- | :--- |
-| **🔍 InnerTube & Multi-Platform Search** | Fast metadata extraction via YouTube InnerTube & direct Instagram resolver. | No API keys or quota limits required. |
-| **📷 Instagram Reels & Posts** | 1-Click download and preview of Instagram Reels, videos, and carousels. | Direct import of social media clips into Premiere. |
-| **⚡ Dual Preview Engine** | Dynamic HTTP bridge (`127.0.0.1`) + direct stream piping. | Completely bypasses YouTube **Error 153** and embed blocks. |
-| **🎞️ Smart Transcoding** | Forces Premiere-compatible **H.264 (AVC1)** & **AAC (mp4a)** codecs. | Prevents Premiere's *"Unsupported compression type 'av01'"* error. |
-| **🎵 Lossless Audio** | Dedicated audio extraction to **MP3 (320kbps)**, **WAV**, and **AAC**. | Instant SFX and soundtrack import for sound designers. |
-| **🎯 Timeline Automation** | Automated ExtendScript JSX execution with active sequence detection. | Drops imported media directly at your playhead position. |
-| **🔐 Persistent Account Login** | Save Instagram session once — bypasses browser locks & DPAPI forever. | Download any Reel or post without repetitive logins. |
-| **📦 Zero Configuration** | Bundled offline `yt-dlp` and `FFmpeg` media engines. | Ready out-of-the-box with no command-line tools needed. |
+| **🔍 High-Speed InnerTube Search** | Direct YouTube client search without requiring Google Cloud API keys or rate quotas. | Zero configuration, instantaneous results, unlimited queries. |
+| **📷 Instagram Reels & Posts** | Direct URL parsing for Instagram Reels, videos, and post carousels. | Seamlessly import social media content and reference clips. |
+| **⚡ Dual Preview Engine** | Local HTTP reverse-proxy (`127.0.0.1:<port>`) combined with piped direct streaming. | Completely eliminates YouTube **Error 153** and embed blocks. |
+| **🎞️ Premiere-Native Codecs** | Automatically selects and transcodes to **H.264 (AVC1)** video and **AAC (mp4a)** audio. | Never encounter Premiere's *"Unsupported compression type 'av01'"* error. |
+| **🎵 Dedicated Audio Extraction** | 1-Click extraction to **MP3 (320kbps)**, **WAV**, or **AAC** formats. | Fast workflow for sound effects, foley, background music, and podcasts. |
+| **🎯 Automated Timeline Placement** | ExtendScript JSX engine reads active sequence timecode and video/audio track targeting. | Media appears directly at your cursor/playhead automatically. |
+| **📂 Smart Project Folder Sync** | Automatically saves downloads into the active Premiere `.prproj` root directory. | Keeps project assets organized without manual file copying. |
+| **🔐 Instagram Session Manager** | In-panel session cookie storage to unlock age-restricted or private Instagram media. | No repetitive browser logins or DPAPI decryption errors. |
+| **📦 Bundled Offline Binaries** | Self-contained `yt-dlp` and `FFmpeg` engines included in the package. | Ready to use immediately with zero terminal setup or dependencies. |
+
+---
+
+## 📖 User Guide
+
+### 1. Searching YouTube
+- Type any keyword in the search bar (e.g. `4k cinematic drone b-roll`, `whoosh sfx`, `lo-fi beats`) and press **Enter**.
+- Use the quick preset chips below the search bar to immediately filter common asset categories.
+- Click on any thumbnail card to open the **Preview & Download Modal**.
+
+### 2. Downloading Instagram Reels
+- Copy any Instagram link from your browser or mobile app:
+  ```text
+  https://www.instagram.com/reel/C8xxxxxxxx/
+  ```
+- Click the **`📷 Instagram Reel`** preset chip or paste the URL into the search bar.
+- StreamDock will instantly fetch the Reel metadata, creator name, and thumbnail.
+- Click **Start Download** — the high-definition MP4 will be saved and imported directly into Premiere Pro!
+
+### 3. Preview Modal & Player Controls
+- **Web Embed Mode**: Plays video directly using the embedded web player with full YouTube playback controls.
+- **Direct MP4 Mode**: Uses StreamDock's local media bridge for direct video streaming. Useful for music videos or videos that restrict third-party web embeds.
+- **Format Options**: Select **Video (MP4)** or **Audio Only (MP3/WAV/AAC)**.
+- **Resolution Selector**: Choose from **Best Available**, **4K (2160p)**, **1440p**, **1080p Full HD**, or **720p HD**.
+- **Insert into Active Timeline**: Check this box to automatically place the downloaded clip on your active sequence timeline at the current playhead position.
+
+### 4. Settings & Preferences
+- **Download Location**: Set to *Auto (Active Project Folder)* to keep downloads organized with each `.prproj` project, or select a custom folder on your system.
+- **Default Quality & Audio Format**: Set your preferred default resolution and audio format to save time on every download.
+- **Instagram Session**: If you frequently download from Instagram, paste your `sessionid` cookie value in Settings to authenticate once and download restricted content seamlessly.
 
 ---
 
@@ -155,26 +205,25 @@ Place the `com.streamdock.youtube.downloader` folder into:
   <img src="assets/streamdock-workflow.svg" alt="StreamDock Architecture &amp; Workflow" width="100%" />
 </div>
 
-### Component Breakdown
+### System Layer Overview
 
-1. **Frontend CEP Panel (`index.html`, `css/main.css`, `js/app.js`)**:
-   - Modern, responsive dark-themed user interface matching Premiere Pro CC design guidelines.
-   - Live search debounce, preset filter chips, Instagram paste trigger, tab switching, and modal controls.
-2. **Instagram Extractor (`js/instagram-extractor.js`)**:
-   - Parses Instagram Reel and Post URLs, extracts creator handles, captions, thumbnails, and direct MP4 streams.
-3. **Session Manager (`js/session-manager.js`)**:
-   - Stores and generates persistent Netscape `cookies.txt` authentication files for Instagram.
-   - Completely circumvents Windows Chrome/Edge DPAPI cookie encryption limitations.
-4. **Local HTTP Bridge Server (`js/preview-server.js`)**:
-   - Spawns a loopback server on a dynamic port (`http://127.0.0.1:<port>`).
-   - Serves embedded IFrames with cross-origin headers to eliminate Error 153.
-   - Provides live `/stream` endpoint for direct yt-dlp piped playback of YouTube and Instagram media.
-5. **Smart Candidate Selection (`js/download-candidate-selection.js`)**:
-   - Dynamically builds platform-specific `yt-dlp` format queries.
-   - Prioritizes Premiere Pro native `H.264 (AVC1)` + `AAC (mp4a)` formats over AV1/VP9.
-6. **ExtendScript Host Bridge (`jsx/hostscript.jsx`)**:
-   - Communicates with Premiere Pro's C++ application core.
-   - Auto-locates project directories, creates bins, imports media, and updates sequence tracks.
+1. **Frontend CEP Application (`index.html`, `css/main.css`, `js/app.js`)**:
+   - Runs in Adobe's Chromium Embedded Framework (CEF) environment with integrated Node.js runtime.
+   - Handles tab switching, responsive grid layouts, search debounce, download progress cards, and modal lifecycle.
+2. **Search & Extraction Layer**:
+   - **YouTube Search (`js/youtube-search.js`)**: Communicates with the InnerTube Web API to fetch titles, channel names, view counts, and high-res thumbnails.
+   - **Instagram Extractor (`js/instagram-extractor.js`)**: Queries Instagram CDN endpoints to extract high-bitrate video streams and author metadata.
+3. **Local Loopback Bridge (`js/preview-server.js`)**:
+   - Automatically initializes a lightweight Node.js HTTP server on a dynamic port (`127.0.0.1:<port>`).
+   - Serves an isolated HTML bridge document with cross-origin headers to prevent iframe origin blocking.
+   - Pipes live `yt-dlp` video streams directly to the HTML5 `<video>` tag for embed-restricted media.
+4. **Download & Transcoding Core (`js/downloader.js`, `js/download-candidate-selection.js`)**:
+   - Builds Premiere-optimized format strings (`bv*[vcodec^=avc1]+ba[acodec^=mp4a]`).
+   - Executes bundled `yt-dlp` and `FFmpeg` binaries with real-time stdout progress tracking.
+   - Transcodes audio streams to MP3/WAV/AAC and recodes incompatible video streams to standard H.264.
+5. **ExtendScript Host Bridge (`jsx/hostscript.jsx`)**:
+   - Bridges Node.js with Premiere Pro's C++ ExtendScript engine via `CSInterface.evalScript()`.
+   - Resolves active project paths, creates `StreamDock Downloads` bin, imports media files, and inserts clips at sequence playhead.
 
 ---
 
@@ -187,12 +236,14 @@ StreamDock/
 ├── assets/
 │   ├── streamdock-banner.svg            # Hero banner illustration
 │   ├── streamdock-workflow.svg          # System architecture flowchart
-│   ├── streamdock-premiere-workspace.png # Landscape proof of work (Premiere Pro workspace)
+│   ├── streamdock-premiere-workspace.png # Live Premiere Pro workspace screenshot
 │   ├── streamdock-search-view.png       # Search panel view screenshot
 │   ├── streamdock-downloads-view.png    # Downloads panel view screenshot
 │   └── streamdock-settings-view.png     # Settings & engine status screenshot
 ├── binaries/
-│   └── release.json                     # Media engine version metadata
+│   ├── release.json                     # Media engine version metadata
+│   ├── yt-dlp.exe                       # Bundled yt-dlp binary (Windows)
+│   └── ffmpeg.exe                       # Bundled FFmpeg transcoder (Windows)
 ├── css/
 │   └── main.css                         # Dark/Light theme styles matching Adobe CEP UI
 ├── js/
@@ -215,48 +266,68 @@ StreamDock/
 ├── .debug                               # Chrome DevTools remote debug configuration
 ├── index.html                           # Main extension UI layout
 ├── package.json                         # Project dependencies and script runner
-└── README.md                            # Documentation
+└── README.md                            # Complete documentation
 ```
 
 ---
 
-## 🛠️ Developer Commands
+## 🛠️ Developer Setup & Commands
+
+If you want to modify or contribute to StreamDock:
 
 ```bash
-# 1. Clone repository
+# 1. Clone the repository
 git clone https://github.com/AbinVarghexe/StreamDock.git
 cd StreamDock
 
-# 2. Download and verify binary engines
+# 2. Download latest binary engines (yt-dlp and ffmpeg)
 npm run download:binaries
 
-# 3. Deploy extension locally to Premiere Pro
+# 3. Deploy extension locally to your Adobe CEP folder
 npm run deploy
 
-# 4. Build release package (.zip + INSTALL.bat)
+# 4. Build distribution package (.zip + INSTALL.bat)
 npm run package
 ```
+
+### Remote Debugging in Chrome
+StreamDock includes `.debug` port configuration:
+1. Open Premiere Pro with StreamDock open.
+2. Open Google Chrome and navigate to: `http://localhost:8088`.
+3. You will have access to full Chrome DevTools (Console, Elements, Network, Sources) inside the running CEP panel.
 
 ---
 
 ## ❓ Troubleshooting & FAQ
 
 <details>
-<summary><strong>Q: Why does the video show "Error 153"?</strong></summary>
+<summary><strong>Q: Why does a YouTube video preview say "Error 153"?</strong></summary>
 
-> **Answer**: Error 153 is caused by YouTube rejecting embed requests from `file://` origins. StreamDock automatically spins up a local bridge server at `http://127.0.0.1:<port>` with `strict-origin-when-cross-origin` referrer policy, completely solving this issue.
+> **Answer**: Error 153 occurs when YouTube blocks embed requests originating from `file://` protocols. StreamDock automatically resolves this by serving previews through its local loopback server (`http://127.0.0.1:<port>`) with strict cross-origin referrer headers.
 </details>
 
 <details>
-<summary><strong>Q: What if a VEVO / licensed video gets stuck on the thumbnail?</strong></summary>
+<summary><strong>Q: What if a video is blocked from web embedding?</strong></summary>
 
-> **Answer**: Click the **`▶ yt-dlp Stream`** button in the preview header. StreamDock will pipe the video through its direct streaming engine without relying on YouTube's web embed player.
+> **Answer**: If a music video or copyright-protected video cannot be embedded, StreamDock provides a **`▶ yt-dlp Stream`** button in the preview header that pipes the stream directly through its local media proxy.
 </details>
 
 <details>
-<summary><strong>Q: Where are downloaded files saved?</strong></summary>
+<summary><strong>Q: Can I download Instagram Reels without logging in?</strong></summary>
 
-> **Answer**: By default, files are saved directly in your active Premiere Pro Project's folder. You can change this anytime under the **Settings** tab in the panel.
+> **Answer**: Yes! Public Instagram Reels and posts download directly via the high-speed CDN resolver without any login required. For private accounts or age-restricted content, you can optionally save your session in Settings.
+</details>
+
+<details>
+<summary><strong>Q: Where are downloaded files saved on my hard drive?</strong></summary>
+
+> **Answer**: By default, StreamDock dynamically detects the active Premiere Pro project (`.prproj`) and saves media into a subfolder right next to your project file. You can also specify a fixed download folder in the **Settings** tab.
+</details>
+
+<details>
+<summary><strong>Q: How do I update yt-dlp to the latest version?</strong></summary>
+
+> **Answer**: StreamDock comes with modern binaries bundled. Developers can run `npm run download:binaries` at any time to automatically fetch the newest releases of `yt-dlp` and `FFmpeg`.
 </details>
 
 ---
@@ -268,5 +339,5 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 ---
 
 <div align="center">
-  <sub>Built with ❤️ for video editors, content creators, and motion designers.</sub>
+  <sub>Built with ❤️ for video editors, motion designers, and content creators worldwide.</sub>
 </div>
