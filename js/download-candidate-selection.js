@@ -42,10 +42,7 @@ function buildYtDlpDownloadArgs(url, options = {}) {
     '--newline'
   ];
 
-  // Only apply multi-client extractor args to YouTube URLs
-  if (!isIg) {
-    args.push('--extractor-args', 'youtube:player_client=mweb,web_embedded,tv,android_vr,ios,android');
-  }
+
 
   // Cookie precedence: 1. explicit cookiesFile, 2. saved Instagram session file (if Instagram), 3. cookiesFromBrowser
   if (options.cookiesFile) {
