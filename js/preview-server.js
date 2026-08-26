@@ -1,17 +1,19 @@
 /**
  * preview-server.js
  * StreamDock Local HTTP Preview Bridge & Streaming Server.
+ * Supports YouTube and Instagram Reels previews and streaming.
  *
  * Routes:
  * 1. /youtube-preview?videoId=<id>
  *    Serves YouTube IFrame embed inside a local loopback origin (127.0.0.1:port)
  *    with strict-origin-when-cross-origin headers to eliminate Error 153.
  *
- * 2. /stream?videoId=<id>
+ * 2. /instagram-preview?shortcode=<shortcode>
+ *    Serves Instagram embed player inside the loopback origin.
+ *
+ * 3. /stream?videoId=<id>&platform=<youtube|instagram>
  *    Streams video directly from yt-dlp's internal engine to the browser <video>
- *    tag via an MP4 pipe (using android/mweb player clients). This completely
- *    bypasses 403 Forbidden errors on googlevideo.com URLs and plays all videos
- *    including VEVO, music videos, and embedding-restricted content.
+ *    tag via an MP4 pipe.
  */
 
 const http = require('http');
@@ -21,11 +23,11 @@ const { URL } = require('url');
 let previewBridgeServer = null;
 let previewBridgeOrigin = '';
 
-// Active streaming processes: videoId -> child_process
+// Active streaming processes: key -> child_process
 const activeStreamProcesses = new Map();
 
-function isValidYouTubeVideoId(videoId) {
-  return /^[A-Za-z0-9_-]{11}$/.test(String(videoId || ''));
+function isValidMediaId(id) {
+  return /^[A-Za-z0-9_-]{5,30}$/.test(String(id || ''));
 }
 
 function escapeHtml(value) {
@@ -65,16 +67,38 @@ function sendResponse(response, statusCode, contentType, body) {
 
 // ─── Direct yt-dlp MP4 Stream Pipeline ────────────────────────────────────────
 
-function handleDirectStreamRequest(request, response, videoId) {
+function handleDirectStreamRequest(request, response, mediaId, platform = 'youtube', cookiesBrowser = '') {
   const ytDlpPath = getYtDlpPath();
-  const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
+  const processKey = `${platform}_${mediaId}`;
+  
+  let mediaUrl = '';
+  const args = [
+    '--no-playlist',
+    '--no-warnings',
+    '--quiet'
+  ];
 
-  // Kill any previous stream for this videoId to avoid duplicate bandwidth
-  if (activeStreamProcesses.has(videoId)) {
+  if (platform === 'instagram') {
+    mediaUrl = `https://www.instagram.com/reel/${mediaId}/`;
+    args.push('-f', 'bestvideo+bestaudio/best[ext=mp4]/best');
+  } else {
+    mediaUrl = `https://www.youtube.com/watch?v=${mediaId}`;
+    args.push('--extractor-args', 'youtube:player_client=android,mweb,web,web_embedded');
+    args.push('-f', '18/b/ba/best[ext=mp4]/best');
+  }
+
+  if (cookiesBrowser) {
+    args.push('--cookies-from-browser', cookiesBrowser);
+  }
+
+  args.push('-o', '-', mediaUrl);
+
+  // Kill any previous stream for this mediaId to avoid duplicate bandwidth
+  if (activeStreamProcesses.has(processKey)) {
     try {
-      activeStreamProcesses.get(videoId).kill();
+      activeStreamProcesses.get(processKey).kill();
     } catch (e) {}
-    activeStreamProcesses.delete(videoId);
+    activeStreamProcesses.delete(processKey);
   }
 
   response.writeHead(200, {
@@ -84,39 +108,29 @@ function handleDirectStreamRequest(request, response, videoId) {
     'Connection': 'keep-alive'
   });
 
-  const args = [
-    '--no-playlist',
-    '--no-warnings',
-    '--quiet',
-    '--extractor-args', 'youtube:player_client=android,mweb',
-    '-f', '18/b/ba/best[ext=mp4]/best',
-    '-o', '-',
-    ytUrl
-  ];
-
-  console.log(`[StreamDock] Starting direct stream pipe for ${videoId}...`);
+  console.log(`[StreamDock] Starting direct stream pipe for ${platform} ${mediaId}...`);
   const proc = spawn(ytDlpPath, args, { windowsHide: true });
-  activeStreamProcesses.set(videoId, proc);
+  activeStreamProcesses.set(processKey, proc);
 
   proc.stdout.pipe(response);
 
   proc.stderr.on('data', (data) => {
     const msg = data.toString().trim();
     if (msg) {
-      console.warn(`[StreamDock yt-dlp pipe ${videoId}]:`, msg);
+      console.warn(`[StreamDock yt-dlp pipe ${mediaId}]:`, msg);
     }
   });
 
   proc.on('close', (code) => {
-    activeStreamProcesses.delete(videoId);
+    activeStreamProcesses.delete(processKey);
     if (!response.writableEnded) {
       response.end();
     }
   });
 
   proc.on('error', (err) => {
-    activeStreamProcesses.delete(videoId);
-    console.error(`[StreamDock yt-dlp spawn error ${videoId}]:`, err);
+    activeStreamProcesses.delete(processKey);
+    console.error(`[StreamDock yt-dlp spawn error ${mediaId}]:`, err);
     if (!response.headersSent) {
       sendResponse(response, 500, 'text/plain', 'Stream error: ' + err.message);
     } else {
@@ -126,16 +140,16 @@ function handleDirectStreamRequest(request, response, videoId) {
 
   // When client disconnects / modal closes / switches video, kill the child process immediately
   request.on('close', () => {
-    if (activeStreamProcesses.get(videoId) === proc) {
+    if (activeStreamProcesses.get(processKey) === proc) {
       try {
         proc.kill();
       } catch (e) {}
-      activeStreamProcesses.delete(videoId);
+      activeStreamProcesses.delete(processKey);
     }
   });
 }
 
-// ─── Bridge HTML for YouTube IFrame Embed ────────────────────────────────────
+// ─── Bridge HTML for YouTube & Instagram Embeds ───────────────────────────────
 
 function buildYouTubeEmbedUrl(videoId, embedOrigin) {
   const params = [
@@ -156,7 +170,7 @@ function buildYouTubeEmbedUrl(videoId, embedOrigin) {
   return 'https://www.youtube.com/embed/' + encodeURIComponent(videoId) + '?' + params.join('&');
 }
 
-function buildPreviewBridgeHtml(videoId) {
+function buildYouTubeBridgeHtml(videoId) {
   const embedUrl = buildYouTubeEmbedUrl(videoId, previewBridgeOrigin);
   const scriptVideoId = escapeJavaScriptString(videoId);
 
@@ -208,6 +222,18 @@ function buildPreviewBridgeHtml(videoId) {
     '</body></html>';
 }
 
+function buildInstagramBridgeHtml(shortcode) {
+  const embedUrl = `https://www.instagram.com/p/${encodeURIComponent(shortcode)}/embed/captioned/`;
+
+  return '<!doctype html>' +
+    '<html><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+    '<style>html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center}iframe{display:block;width:100%;height:100%;border:0}</style>' +
+    '</head><body>' +
+    '<iframe src="' + escapeHtml(embedUrl) + '" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture"></iframe>' +
+    '</body></html>';
+}
+
 // ─── Request Handler ─────────────────────────────────────────────────────────
 
 function handleRequest(request, response) {
@@ -224,22 +250,36 @@ function handleRequest(request, response) {
   // Route: /youtube-preview?videoId=<id>
   if (pathname === '/youtube-preview') {
     const videoId = requestUrl.searchParams.get('videoId') || '';
-    if (!isValidYouTubeVideoId(videoId)) {
+    if (!isValidMediaId(videoId)) {
       sendResponse(response, 400, 'text/plain', 'Invalid video id');
       return;
     }
-    sendResponse(response, 200, 'text/html; charset=utf-8', buildPreviewBridgeHtml(videoId));
+    sendResponse(response, 200, 'text/html; charset=utf-8', buildYouTubeBridgeHtml(videoId));
     return;
   }
 
-  // Route: /stream?videoId=<id> (Direct yt-dlp piped MP4 stream)
-  if (pathname === '/stream') {
-    const videoId = requestUrl.searchParams.get('videoId') || '';
-    if (!isValidYouTubeVideoId(videoId)) {
-      sendResponse(response, 400, 'text/plain', 'Invalid video id');
+  // Route: /instagram-preview?shortcode=<shortcode>
+  if (pathname === '/instagram-preview') {
+    const shortcode = requestUrl.searchParams.get('shortcode') || '';
+    if (!isValidMediaId(shortcode)) {
+      sendResponse(response, 400, 'text/plain', 'Invalid shortcode');
       return;
     }
-    handleDirectStreamRequest(request, response, videoId);
+    sendResponse(response, 200, 'text/html; charset=utf-8', buildInstagramBridgeHtml(shortcode));
+    return;
+  }
+
+  // Route: /stream?videoId=<id>&platform=<youtube|instagram>&cookiesBrowser=<browser>
+  if (pathname === '/stream') {
+    const videoId = requestUrl.searchParams.get('videoId') || '';
+    const platform = requestUrl.searchParams.get('platform') || 'youtube';
+    const cookiesBrowser = requestUrl.searchParams.get('cookiesBrowser') || '';
+    
+    if (!isValidMediaId(videoId)) {
+      sendResponse(response, 400, 'text/plain', 'Invalid media id');
+      return;
+    }
+    handleDirectStreamRequest(request, response, videoId, platform, cookiesBrowser);
     return;
   }
 
@@ -275,15 +315,26 @@ function startPreviewBridgeServer() {
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 function getPreviewUrl(videoId) {
-  if (previewBridgeOrigin && isValidYouTubeVideoId(videoId)) {
+  if (previewBridgeOrigin && isValidMediaId(videoId)) {
     return previewBridgeOrigin + '/youtube-preview?videoId=' + encodeURIComponent(videoId);
   }
   return 'https://www.youtube.com/embed/' + encodeURIComponent(videoId) + '?autoplay=1&enablejsapi=1&rel=0&playsinline=1';
 }
 
-function getProxiedStreamUrl(videoId) {
-  if (previewBridgeOrigin && isValidYouTubeVideoId(videoId)) {
-    return previewBridgeOrigin + '/stream?videoId=' + encodeURIComponent(videoId);
+function getInstagramPreviewUrl(shortcode) {
+  if (previewBridgeOrigin && isValidMediaId(shortcode)) {
+    return previewBridgeOrigin + '/instagram-preview?shortcode=' + encodeURIComponent(shortcode);
+  }
+  return `https://www.instagram.com/p/${encodeURIComponent(shortcode)}/embed/captioned/`;
+}
+
+function getProxiedStreamUrl(mediaId, platform = 'youtube', cookiesBrowser = '') {
+  if (previewBridgeOrigin && isValidMediaId(mediaId)) {
+    let url = previewBridgeOrigin + '/stream?videoId=' + encodeURIComponent(mediaId) + '&platform=' + encodeURIComponent(platform);
+    if (cookiesBrowser) {
+      url += '&cookiesBrowser=' + encodeURIComponent(cookiesBrowser);
+    }
+    return url;
   }
   return null;
 }
@@ -295,6 +346,7 @@ function getPreviewBridgeOrigin() {
 module.exports = {
   startPreviewBridgeServer,
   getPreviewUrl,
+  getInstagramPreviewUrl,
   getProxiedStreamUrl,
   getPreviewBridgeOrigin
 };

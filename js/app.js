@@ -6,7 +6,7 @@
   'use strict';
 
   // 1. Resolve Node.js Modules safely
-  let path, fs, binaryManager, youtubeSearch, downloader, candidateDiscovery, previewServer;
+  let path, fs, binaryManager, youtubeSearch, downloader, candidateDiscovery, previewServer, instagramExtractor;
   let isNodeAvailable = false;
 
   try {
@@ -24,6 +24,7 @@
       downloader = require(path.join(baseDir, 'js', 'downloader.js'));
       candidateDiscovery = require(path.join(baseDir, 'js', 'download-candidate-discovery.js'));
       previewServer = require(path.join(baseDir, 'js', 'preview-server.js'));
+      instagramExtractor = require(path.join(baseDir, 'js', 'instagram-extractor.js'));
       isNodeAvailable = true;
     }
   } catch (err) {
@@ -96,6 +97,7 @@
     settingDefaultAudioFormat: document.getElementById('setting-default-audio-format'),
     settingAutoImportBin: document.getElementById('setting-auto-import-bin'),
     settingAutoInsertTimeline: document.getElementById('setting-auto-insert-timeline'),
+    settingCookiesBrowser: document.getElementById('setting-cookies-browser'),
     statusYtDlp: document.getElementById('status-ytdlp'),
     statusFfmpeg: document.getElementById('status-ffmpeg'),
     toastContainer: document.getElementById('toast-container')
@@ -117,6 +119,9 @@
     elements.settingAutoImportBin.checked = state.settings.autoImportBin;
     elements.settingAutoInsertTimeline.checked = state.settings.autoInsertTimeline;
     elements.settingDownloadDir.value = state.settings.downloadDir;
+    if (elements.settingCookiesBrowser) {
+      elements.settingCookiesBrowser.value = state.settings.cookiesBrowser || '';
+    }
   }
 
   function saveSettings() {
@@ -126,6 +131,9 @@
       state.settings.autoImportBin = elements.settingAutoImportBin.checked;
       state.settings.autoInsertTimeline = elements.settingAutoInsertTimeline.checked;
       state.settings.downloadDir = elements.settingDownloadDir.value.trim();
+      if (elements.settingCookiesBrowser) {
+        state.settings.cookiesBrowser = elements.settingCookiesBrowser.value;
+      }
       localStorage.setItem('streamdock_settings', JSON.stringify(state.settings));
       showToast('Settings saved');
     } catch (e) {
@@ -215,14 +223,26 @@
     elements.searchEmpty.style.display = 'none';
 
     try {
+      // 1. Check if user pasted an Instagram Reel or post URL
+      if (instagramExtractor && instagramExtractor.isInstagramUrl(query)) {
+        showToast('Fetching Instagram Reel...', 'info');
+        const reel = await instagramExtractor.getReelMetadata(query, {
+          cookiesBrowser: state.settings.cookiesBrowser
+        });
+        state.searchResults = [reel];
+        renderSearchResults([reel]);
+        return;
+      }
+
+      // 2. Standard YouTube Search
       if (youtubeSearch) {
         const results = await youtubeSearch.searchYouTube(query);
         state.searchResults = results;
         renderSearchResults(results);
       }
     } catch (err) {
-      console.error('Search failed:', err);
-      showToast('Search failed: ' + err.message, 'error');
+      console.error('Search/Extract failed:', err);
+      showToast('Extraction failed: ' + err.message, 'error');
     } finally {
       elements.searchSpinner.style.display = 'none';
     }
@@ -233,25 +253,27 @@
 
     if (!videos || videos.length === 0) {
       elements.searchEmpty.style.display = 'flex';
-      elements.searchEmpty.querySelector('h3').textContent = 'No Videos Found';
-      elements.searchEmpty.querySelector('p').textContent = 'Try adjusting your search terms or filter.';
+      elements.searchEmpty.querySelector('h3').textContent = 'No Media Found';
+      elements.searchEmpty.querySelector('p').textContent = 'Try adjusting your search terms or paste a direct YouTube / Instagram link.';
       return;
     }
 
     elements.searchEmpty.style.display = 'none';
 
     videos.forEach((video) => {
+      const isIg = video.platform === 'instagram';
       const card = document.createElement('div');
       card.className = 'video-card';
       card.innerHTML = `
         <div class="card-thumbnail-wrap">
+          ${isIg ? '<span class="platform-badge-instagram">📷 REEL</span>' : ''}
           <img src="${video.thumbnail}" alt="${video.title}" loading="lazy" />
           <span class="duration-badge">${video.duration}</span>
         </div>
         <div class="card-body">
           <h4 class="card-title" title="${video.title}">${video.title}</h4>
           <div class="card-meta">
-            <span>${video.channel}</span>
+            <span style="${isIg ? 'color: #ff5c8a; font-weight: 600;' : ''}">${video.channel}</span>
             <span>•</span>
             <span>${video.views}</span>
           </div>
@@ -342,6 +364,28 @@
     previewAbortToken = currentToken;
     hideBanner();
 
+    // If Instagram Reel
+    if (video.platform === 'instagram') {
+      currentPlayerMode = 'direct';
+      updatePlayerVisibility();
+      if (elements.modalQualitySelect && elements.modalQualitySelect.closest('.form-group')) {
+        elements.modalQualitySelect.closest('.form-group').style.display = 'none';
+      }
+      if (video.videoUrl) {
+        elements.modalPlayerLoading.classList.remove('active');
+        elements.modalVideoPlayer.src = video.videoUrl;
+        elements.modalVideoPlayer.load();
+        elements.modalVideoPlayer.play().catch(() => {});
+        return;
+      }
+      loadDirectStream(video, currentToken);
+      return;
+    } else {
+      if (elements.modalQualitySelect && elements.modalQualitySelect.closest('.form-group')) {
+        elements.modalQualitySelect.closest('.form-group').style.display = 'block';
+      }
+    }
+
     // Prewarm direct stream cache in the background so yt-dlp streaming is instant if needed
     if (previewServer && previewServer.warmStreamCache) {
       previewServer.warmStreamCache(video.id);
@@ -383,10 +427,11 @@
       return;
     }
 
-    const proxiedUrl = previewServer.getProxiedStreamUrl(video.id);
+    const platform = video.platform || 'youtube';
+    const proxiedUrl = previewServer.getProxiedStreamUrl(video.id, platform, state.settings.cookiesBrowser);
     if (!proxiedUrl) {
       elements.modalPlayerLoading.classList.remove('active');
-      showToast('Could not resolve stream URL for video', 'error');
+      showToast('Could not resolve stream URL for media', 'error');
       return;
     }
 
@@ -523,6 +568,7 @@
         quality,
         audioFormat,
         destinationDir: destDir,
+        cookiesFromBrowser: state.settings.cookiesBrowser,
         onProgress: (p) => {
           downloadItem.percent = Math.round(p.percent);
           downloadItem.speed = p.speed;
@@ -727,9 +773,20 @@
       chip.addEventListener('click', () => {
         elements.filterChips.forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
-        elements.searchInput.value = chip.dataset.query;
-        elements.clearSearchBtn.style.display = 'block';
-        performSearch(chip.dataset.query);
+        
+        if (chip.dataset.action === 'paste-instagram') {
+          elements.searchInput.value = '';
+          elements.searchInput.placeholder = 'Paste Instagram link (e.g. https://www.instagram.com/reel/...)';
+          elements.searchInput.focus();
+          return;
+        }
+
+        elements.searchInput.placeholder = 'Search YouTube or paste YouTube / Instagram Reel link...';
+        elements.searchInput.value = chip.dataset.query || '';
+        elements.clearSearchBtn.style.display = chip.dataset.query ? 'block' : 'none';
+        if (chip.dataset.query) {
+          performSearch(chip.dataset.query);
+        }
       });
     });
 
@@ -794,7 +851,8 @@
       elements.settingDefaultAudioFormat,
       elements.settingAutoImportBin,
       elements.settingAutoInsertTimeline,
-      elements.settingDownloadDir
+      elements.settingDownloadDir,
+      elements.settingCookiesBrowser
     ].forEach((input) => {
       if (input) input.addEventListener('change', saveSettings);
     });

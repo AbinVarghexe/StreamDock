@@ -1,7 +1,18 @@
 /**
  * download-candidate-selection.js
- * Formats yt-dlp arguments and format selection strings optimized for Adobe Premiere Pro.
+ * Formats yt-dlp arguments and format selection strings optimized for Adobe Premiere Pro,
+ * supporting YouTube, Instagram Reels, and direct media sources.
  */
+
+/**
+ * Checks if a URL is from Instagram
+ * @param {string} url
+ * @returns {boolean}
+ */
+function isInstagramUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  return /(?:https?:\/\/)?(?:www\.)?(?:instagram\.com|instagr\.am)\/(?:reel|reels|p|tv)\//i.test(url.trim());
+}
 
 /**
  * Builds format string and yt-dlp arguments ensuring Adobe Premiere Pro compatible H.264/AAC codecs.
@@ -19,15 +30,19 @@ function buildYtDlpDownloadArgs(url, options = {}) {
   const audioFormat = options.audioFormat || 'mp3';
   const destinationDir = options.destinationDir || '.';
   const cookiesFromBrowser = options.cookiesFromBrowser || '';
+  const isIg = isInstagramUrl(url);
 
   const args = [
     '--no-playlist',
     '--no-warnings',
     '--progress',
-    '--newline',
-    // Multi-client fallback
-    '--extractor-args', 'youtube:player_client=mweb,web_embedded,tv,android_vr,ios,android'
+    '--newline'
   ];
+
+  // Only apply multi-client extractor args to YouTube URLs
+  if (!isIg) {
+    args.push('--extractor-args', 'youtube:player_client=mweb,web_embedded,tv,android_vr,ios,android');
+  }
 
   if (cookiesFromBrowser) {
     args.push('--cookies-from-browser', cookiesFromBrowser);
@@ -43,8 +58,14 @@ function buildYtDlpDownloadArgs(url, options = {}) {
     args.push('--audio-format', audioFormat);
     args.push('--audio-quality', '0');
     args.push('-f', 'bestaudio[acodec^=mp4a]/bestaudio/best');
+  } else if (isIg) {
+    // Instagram video mode: direct best MP4 or standard H.264 video
+    args.push('-f', 'bestvideo+bestaudio/best[ext=mp4]/best');
+    args.push('--merge-output-format', 'mp4');
+    args.push('--recode-video', 'mp4');
+    args.push('--postprocessor-args', 'VideoConvertor:-c:v libx264 -pix_fmt yuv420p -c:a aac');
   } else {
-    // Video mode: Prioritize H.264 (avc1/h264) + AAC (mp4a) for Premiere Pro native compatibility (avoids av01/vp9 error)
+    // YouTube Video mode: Prioritize H.264 (avc1/h264) + AAC (mp4a) for Premiere Pro native compatibility
     if (quality === 'best') {
       args.push(
         '-f',
@@ -75,5 +96,6 @@ function buildYtDlpDownloadArgs(url, options = {}) {
 }
 
 module.exports = {
-  buildYtDlpDownloadArgs
+  buildYtDlpDownloadArgs,
+  isInstagramUrl
 };

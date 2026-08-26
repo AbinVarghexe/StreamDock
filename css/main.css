@@ -247,13 +247,41 @@ body {
 .chip:hover {
   background: var(--bg-surface-hover);
   color: var(--text-primary);
-}
-
 .chip.active {
   background: var(--accent-subtle);
   border-color: var(--accent);
   color: var(--accent);
   font-weight: 600;
+}
+
+/* Instagram Filter Chip & Badge Styling */
+.chip-instagram {
+  border-color: rgba(225, 48, 108, 0.4) !important;
+  color: #ff5c8a !important;
+  background: rgba(225, 48, 108, 0.08) !important;
+}
+
+.chip-instagram:hover {
+  background: rgba(225, 48, 108, 0.18) !important;
+  border-color: #e1306c !important;
+}
+
+.platform-badge-instagram {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+  letter-spacing: 0.5px;
 }
 
 /* Main Content Views */

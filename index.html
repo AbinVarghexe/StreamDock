@@ -62,7 +62,7 @@
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <input type="text" id="search-input" class="search-input" placeholder="Search YouTube or paste video URL..." autocomplete="off" />
+        <input type="text" id="search-input" class="search-input" placeholder="Search YouTube or paste YouTube / Instagram Reel link..." autocomplete="off" />
         <button id="clear-search-btn" class="clear-search-btn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -79,6 +79,7 @@
         <button class="chip" data-query="drone cinematic landscape 4k">Drone 4K</button>
         <button class="chip" data-query="green screen memes overlay">Green Screen</button>
         <button class="chip" data-query="cinematic trailer riser impact sfx">Impact SFX</button>
+        <button class="chip chip-instagram" data-action="paste-instagram" title="Paste Instagram Reel Link">📷 Instagram Reel</button>
       </div>
     </div>
 
@@ -95,7 +96,7 @@
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
           <h3>Discover & Import Media</h3>
-          <p>Search millions of YouTube videos, sound effects, and music directly into Premiere Pro.</p>
+          <p>Search YouTube or paste any YouTube / Instagram Reel link directly into Premiere Pro.</p>
         </div>
       </div>
 
@@ -163,6 +164,30 @@
             <input type="checkbox" id="setting-auto-insert-timeline" />
             <span>Automatically insert imported clip onto Timeline playhead</span>
           </label>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-heading">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+              <path d="M2 12h20"></path>
+            </svg>
+            <span>Instagram & Browser Authentication (Optional)</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Browser for Session Cookies</label>
+            <select id="setting-cookies-browser" class="form-select">
+              <option value="" selected>None (Direct Public Fetch)</option>
+              <option value="chrome">Google Chrome</option>
+              <option value="edge">Microsoft Edge</option>
+              <option value="firefox">Mozilla Firefox</option>
+              <option value="brave">Brave Browser</option>
+              <option value="opera">Opera</option>
+              <option value="vivaldi">Vivaldi</option>
+            </select>
+            <span style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">Use if downloading private/age-restricted Instagram Reels.</span>
+          </div>
         </div>
 
         <div class="settings-section">

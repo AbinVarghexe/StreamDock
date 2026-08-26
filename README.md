@@ -138,11 +138,13 @@ Place the `com.streamdock.youtube.downloader` folder into:
 
 | Feature | Description | Benefit |
 | :--- | :--- | :--- |
-| **🔍 InnerTube Search** | Fast metadata extraction directly via YouTube's internal API. | No YouTube API keys or quota limits required. |
+| **🔍 InnerTube & Multi-Platform Search** | Fast metadata extraction via YouTube InnerTube & direct Instagram resolver. | No API keys or quota limits required. |
+| **📷 Instagram Reels & Posts** | 1-Click download and preview of Instagram Reels, videos, and carousels. | Direct import of social media clips into Premiere. |
 | **⚡ Dual Preview Engine** | Dynamic HTTP bridge (`127.0.0.1`) + direct stream piping. | Completely bypasses YouTube **Error 153** and embed blocks. |
 | **🎞️ Smart Transcoding** | Forces Premiere-compatible **H.264 (AVC1)** & **AAC (mp4a)** codecs. | Prevents Premiere's *"Unsupported compression type 'av01'"* error. |
 | **🎵 Lossless Audio** | Dedicated audio extraction to **MP3 (320kbps)**, **WAV**, and **AAC**. | Instant SFX and soundtrack import for sound designers. |
 | **🎯 Timeline Automation** | Automated ExtendScript JSX execution with active sequence detection. | Drops imported media directly at your playhead position. |
+| **🍪 Browser Cookie Authentication** | Optional cookie extraction from Chrome, Edge, Firefox, Brave, Opera, Vivaldi. | Download private or age-restricted content effortlessly. |
 | **📦 Zero Configuration** | Bundled offline `yt-dlp` and `FFmpeg` media engines. | Ready out-of-the-box with no command-line tools needed. |
 
 ---
@@ -157,15 +159,17 @@ Place the `com.streamdock.youtube.downloader` folder into:
 
 1. **Frontend CEP Panel (`index.html`, `css/main.css`, `js/app.js`)**:
    - Modern, responsive dark-themed user interface matching Premiere Pro CC design guidelines.
-   - Live search debounce, preset filter chips, tab switching, and modal controls.
-2. **Local HTTP Bridge Server (`js/preview-server.js`)**:
+   - Live search debounce, preset filter chips, Instagram paste trigger, tab switching, and modal controls.
+2. **Instagram Extractor (`js/instagram-extractor.js`)**:
+   - Parses Instagram Reel and Post URLs, extracts creator handles, captions, thumbnails, and direct MP4 streams.
+3. **Local HTTP Bridge Server (`js/preview-server.js`)**:
    - Spawns a loopback server on a dynamic port (`http://127.0.0.1:<port>`).
-   - Serves an embedded IFrame with cross-origin headers to eliminate Error 153.
-   - Provides a live `/stream?videoId=xxx` endpoint that pipes decrypted MP4 video from `yt-dlp` directly into native HTML5 video player.
-3. **Smart Candidate Selection (`js/download-candidate-selection.js`)**:
-   - Dynamically builds `yt-dlp` format filtering queries.
-   - Prioritizes `bv*[vcodec^=avc1]+ba[acodec^=mp4a]` formats over AV1/VP9.
-4. **ExtendScript Host Bridge (`jsx/hostscript.jsx`)**:
+   - Serves embedded IFrames with cross-origin headers to eliminate Error 153.
+   - Provides live `/stream` endpoint for direct yt-dlp piped playback of YouTube and Instagram media.
+4. **Smart Candidate Selection (`js/download-candidate-selection.js`)**:
+   - Dynamically builds platform-specific `yt-dlp` format queries.
+   - Prioritizes Premiere Pro native `H.264 (AVC1)` + `AAC (mp4a)` formats over AV1/VP9.
+5. **ExtendScript Host Bridge (`jsx/hostscript.jsx`)**:
    - Communicates with Premiere Pro's C++ application core.
    - Auto-locates project directories, creates bins, imports media, and updates sequence tracks.
 
@@ -193,6 +197,7 @@ StreamDock/
 │   ├── binary-manager.js                # Detection & validation of yt-dlp/ffmpeg
 │   ├── download-candidate-selection.js  # Format prioritization & Premiere codec rules
 │   ├── downloader.js                    # Download orchestration & progress reporter
+│   ├── instagram-extractor.js           # Instagram Reels/Posts parser & metadata engine
 │   ├── preview-server.js                # Loopback HTTP server & direct MP4 stream proxy
 │   └── youtube-search.js                # High-speed InnerTube API client
 ├── jsx/
