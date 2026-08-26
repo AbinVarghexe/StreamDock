@@ -4,6 +4,8 @@
  * supporting YouTube, Instagram Reels, and direct media sources.
  */
 
+const sessionManager = require('./session-manager');
+
 /**
  * Checks if a URL is from Instagram
  * @param {string} url
@@ -23,6 +25,7 @@ function isInstagramUrl(url) {
  *   - audioFormat: 'mp3' | 'wav' | 'aac' | 'm4a'
  *   - destinationDir: string
  *   - cookiesFromBrowser: string
+ *   - cookiesFile: string
  */
 function buildYtDlpDownloadArgs(url, options = {}) {
   const formatType = options.formatType || 'video';
@@ -44,8 +47,11 @@ function buildYtDlpDownloadArgs(url, options = {}) {
     args.push('--extractor-args', 'youtube:player_client=mweb,web_embedded,tv,android_vr,ios,android');
   }
 
+  // Cookie precedence: 1. explicit cookiesFile, 2. saved Instagram session file, 3. cookiesFromBrowser
   if (options.cookiesFile) {
     args.push('--cookies', options.cookiesFile);
+  } else if (isIg && sessionManager && sessionManager.hasInstagramSession()) {
+    args.push('--cookies', sessionManager.getInstagramSessionFilePath());
   } else if (cookiesFromBrowser) {
     args.push('--cookies-from-browser', cookiesFromBrowser);
   }

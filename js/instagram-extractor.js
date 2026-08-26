@@ -6,6 +6,7 @@
 const { execFile, spawn } = require('child_process');
 const https = require('https');
 const binaryManager = require('./binary-manager');
+const sessionManager = require('./session-manager');
 
 // Cache metadata for 10 minutes
 const metadataCache = new Map();
@@ -63,7 +64,9 @@ function extractWithYtDlp(url, options = {}) {
       url
     ];
 
-    if (options.cookiesBrowser) {
+    if (sessionManager && sessionManager.hasInstagramSession()) {
+      args.push('--cookies', sessionManager.getInstagramSessionFilePath());
+    } else if (options.cookiesBrowser) {
       args.push('--cookies-from-browser', options.cookiesBrowser);
     }
 

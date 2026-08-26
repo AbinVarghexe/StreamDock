@@ -81,14 +81,23 @@ function handleDirectStreamRequest(request, response, mediaId, platform = 'youtu
   if (platform === 'instagram') {
     mediaUrl = `https://www.instagram.com/reel/${mediaId}/`;
     args.push('-f', 'bestvideo+bestaudio/best[ext=mp4]/best');
+    try {
+      const sessionManager = require('./session-manager');
+      if (sessionManager.hasInstagramSession()) {
+        args.push('--cookies', sessionManager.getInstagramSessionFilePath());
+      } else if (cookiesBrowser) {
+        args.push('--cookies-from-browser', cookiesBrowser);
+      }
+    } catch (e) {
+      if (cookiesBrowser) args.push('--cookies-from-browser', cookiesBrowser);
+    }
   } else {
     mediaUrl = `https://www.youtube.com/watch?v=${mediaId}`;
     args.push('--extractor-args', 'youtube:player_client=android,mweb,web,web_embedded');
     args.push('-f', '18/b/ba/best[ext=mp4]/best');
-  }
-
-  if (cookiesBrowser) {
-    args.push('--cookies-from-browser', cookiesBrowser);
+    if (cookiesBrowser) {
+      args.push('--cookies-from-browser', cookiesBrowser);
+    }
   }
 
   args.push('-o', '-', mediaUrl);

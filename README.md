@@ -144,7 +144,7 @@ Place the `com.streamdock.youtube.downloader` folder into:
 | **🎞️ Smart Transcoding** | Forces Premiere-compatible **H.264 (AVC1)** & **AAC (mp4a)** codecs. | Prevents Premiere's *"Unsupported compression type 'av01'"* error. |
 | **🎵 Lossless Audio** | Dedicated audio extraction to **MP3 (320kbps)**, **WAV**, and **AAC**. | Instant SFX and soundtrack import for sound designers. |
 | **🎯 Timeline Automation** | Automated ExtendScript JSX execution with active sequence detection. | Drops imported media directly at your playhead position. |
-| **🍪 Browser Cookie Authentication** | Optional cookie extraction from Chrome, Edge, Firefox, Brave, Opera, Vivaldi. | Download private or age-restricted content effortlessly. |
+| **🔐 Persistent Account Login** | Save Instagram session once — bypasses browser locks & DPAPI forever. | Download any Reel or post without repetitive logins. |
 | **📦 Zero Configuration** | Bundled offline `yt-dlp` and `FFmpeg` media engines. | Ready out-of-the-box with no command-line tools needed. |
 
 ---
@@ -162,14 +162,17 @@ Place the `com.streamdock.youtube.downloader` folder into:
    - Live search debounce, preset filter chips, Instagram paste trigger, tab switching, and modal controls.
 2. **Instagram Extractor (`js/instagram-extractor.js`)**:
    - Parses Instagram Reel and Post URLs, extracts creator handles, captions, thumbnails, and direct MP4 streams.
-3. **Local HTTP Bridge Server (`js/preview-server.js`)**:
+3. **Session Manager (`js/session-manager.js`)**:
+   - Stores and generates persistent Netscape `cookies.txt` authentication files for Instagram.
+   - Completely circumvents Windows Chrome/Edge DPAPI cookie encryption limitations.
+4. **Local HTTP Bridge Server (`js/preview-server.js`)**:
    - Spawns a loopback server on a dynamic port (`http://127.0.0.1:<port>`).
    - Serves embedded IFrames with cross-origin headers to eliminate Error 153.
    - Provides live `/stream` endpoint for direct yt-dlp piped playback of YouTube and Instagram media.
-4. **Smart Candidate Selection (`js/download-candidate-selection.js`)**:
+5. **Smart Candidate Selection (`js/download-candidate-selection.js`)**:
    - Dynamically builds platform-specific `yt-dlp` format queries.
    - Prioritizes Premiere Pro native `H.264 (AVC1)` + `AAC (mp4a)` formats over AV1/VP9.
-5. **ExtendScript Host Bridge (`jsx/hostscript.jsx`)**:
+6. **ExtendScript Host Bridge (`jsx/hostscript.jsx`)**:
    - Communicates with Premiere Pro's C++ application core.
    - Auto-locates project directories, creates bins, imports media, and updates sequence tracks.
 
@@ -199,6 +202,7 @@ StreamDock/
 │   ├── downloader.js                    # Download orchestration & progress reporter
 │   ├── instagram-extractor.js           # Instagram Reels/Posts parser & metadata engine
 │   ├── preview-server.js                # Loopback HTTP server & direct MP4 stream proxy
+│   ├── session-manager.js               # Persistent Netscape cookies & account auth engine
 │   └── youtube-search.js                # High-speed InnerTube API client
 ├── jsx/
 │   └── hostscript.jsx                   # ExtendScript host bridge for Project Bin & Timeline

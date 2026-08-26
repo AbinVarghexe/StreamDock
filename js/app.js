@@ -6,7 +6,7 @@
   'use strict';
 
   // 1. Resolve Node.js Modules safely
-  let path, fs, binaryManager, youtubeSearch, downloader, candidateDiscovery, previewServer, instagramExtractor;
+  let path, fs, binaryManager, youtubeSearch, downloader, candidateDiscovery, previewServer, instagramExtractor, sessionManager;
   let isNodeAvailable = false;
 
   try {
@@ -25,6 +25,7 @@
       candidateDiscovery = require(path.join(baseDir, 'js', 'download-candidate-discovery.js'));
       previewServer = require(path.join(baseDir, 'js', 'preview-server.js'));
       instagramExtractor = require(path.join(baseDir, 'js', 'instagram-extractor.js'));
+      sessionManager = require(path.join(baseDir, 'js', 'session-manager.js'));
       isNodeAvailable = true;
     }
   } catch (err) {
@@ -97,7 +98,10 @@
     settingDefaultAudioFormat: document.getElementById('setting-default-audio-format'),
     settingAutoImportBin: document.getElementById('setting-auto-import-bin'),
     settingAutoInsertTimeline: document.getElementById('setting-auto-insert-timeline'),
-    settingCookiesBrowser: document.getElementById('setting-cookies-browser'),
+    settingInstagramCookie: document.getElementById('setting-instagram-cookie'),
+    btnSaveInstagramSession: document.getElementById('btn-save-instagram-session'),
+    btnClearInstagramSession: document.getElementById('btn-clear-instagram-session'),
+    accountStatusBadge: document.getElementById('account-status-badge'),
     statusYtDlp: document.getElementById('status-ytdlp'),
     statusFfmpeg: document.getElementById('status-ffmpeg'),
     toastContainer: document.getElementById('toast-container')
@@ -119,8 +123,24 @@
     elements.settingAutoImportBin.checked = state.settings.autoImportBin;
     elements.settingAutoInsertTimeline.checked = state.settings.autoInsertTimeline;
     elements.settingDownloadDir.value = state.settings.downloadDir;
-    if (elements.settingCookiesBrowser) {
-      elements.settingCookiesBrowser.value = state.settings.cookiesBrowser || '';
+    updateAccountStatusUI();
+  }
+
+  function updateAccountStatusUI() {
+    if (!elements.accountStatusBadge) return;
+    const isConnected = sessionManager && sessionManager.hasInstagramSession();
+    if (isConnected) {
+      elements.accountStatusBadge.textContent = 'Active (Logged In)';
+      elements.accountStatusBadge.style.color = '#2ECC71';
+      elements.accountStatusBadge.style.background = 'rgba(46, 204, 113, 0.15)';
+      if (elements.btnClearInstagramSession) elements.btnClearInstagramSession.style.display = 'block';
+      if (elements.settingInstagramCookie) elements.settingInstagramCookie.placeholder = 'Session active (paste to update)';
+    } else {
+      elements.accountStatusBadge.textContent = 'Not Connected';
+      elements.accountStatusBadge.style.color = 'var(--text-muted)';
+      elements.accountStatusBadge.style.background = 'var(--bg-input)';
+      if (elements.btnClearInstagramSession) elements.btnClearInstagramSession.style.display = 'none';
+      if (elements.settingInstagramCookie) elements.settingInstagramCookie.placeholder = 'Paste sessionid=... or full cookie string';
     }
   }
 
@@ -131,9 +151,6 @@
       state.settings.autoImportBin = elements.settingAutoImportBin.checked;
       state.settings.autoInsertTimeline = elements.settingAutoInsertTimeline.checked;
       state.settings.downloadDir = elements.settingDownloadDir.value.trim();
-      if (elements.settingCookiesBrowser) {
-        state.settings.cookiesBrowser = elements.settingCookiesBrowser.value;
-      }
       localStorage.setItem('streamdock_settings', JSON.stringify(state.settings));
       showToast('Settings saved');
     } catch (e) {
@@ -851,11 +868,37 @@
       elements.settingDefaultAudioFormat,
       elements.settingAutoImportBin,
       elements.settingAutoInsertTimeline,
-      elements.settingDownloadDir,
-      elements.settingCookiesBrowser
+      elements.settingDownloadDir
     ].forEach((input) => {
       if (input) input.addEventListener('change', saveSettings);
     });
+
+    // Instagram Session Save & Clear
+    if (elements.btnSaveInstagramSession) {
+      elements.btnSaveInstagramSession.addEventListener('click', () => {
+        const val = elements.settingInstagramCookie ? elements.settingInstagramCookie.value.trim() : '';
+        if (!val) {
+          showToast('Please paste a cookie string or sessionid first', 'error');
+          return;
+        }
+        if (sessionManager) {
+          sessionManager.saveInstagramSession(val);
+          updateAccountStatusUI();
+          if (elements.settingInstagramCookie) elements.settingInstagramCookie.value = '';
+          showToast('Instagram account session saved!', 'success');
+        }
+      });
+    }
+
+    if (elements.btnClearInstagramSession) {
+      elements.btnClearInstagramSession.addEventListener('click', () => {
+        if (sessionManager) {
+          sessionManager.clearInstagramSession();
+          updateAccountStatusUI();
+          showToast('Instagram account session cleared', 'info');
+        }
+      });
+    }
 
     // Sidestream-compatible bridge message handler
     // Receives {sidestreamPreview:"youtube_embed", type, videoId, details} from bridge HTML

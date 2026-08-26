@@ -169,25 +169,45 @@
         <div class="settings-section">
           <div class="settings-heading">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
-              <path d="M2 12h20"></path>
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
             </svg>
-            <span>Instagram & Browser Authentication (Optional)</span>
+            <span>Instagram Account Login & Session</span>
           </div>
-          <div class="form-group">
-            <label class="form-label">Browser for Session Cookies</label>
-            <select id="setting-cookies-browser" class="form-select">
-              <option value="" selected>None (Direct Public Fetch)</option>
-              <option value="firefox">Mozilla Firefox (Recommended for Windows)</option>
-              <option value="chrome">Google Chrome</option>
-              <option value="edge">Microsoft Edge</option>
-              <option value="brave">Brave Browser</option>
-              <option value="opera">Opera</option>
-              <option value="vivaldi">Vivaldi</option>
-            </select>
-            <span style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">Use if downloading private/age-restricted Instagram Reels. Note: Firefox avoids Windows Chrome DPAPI restrictions.</span>
+
+          <div id="account-status-box" style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-size: 11px; font-weight: 600;">Account Status:</span>
+              <span id="account-status-badge" style="font-size: 10px; font-weight: 700; color: var(--text-muted); background: var(--bg-input); padding: 2px 8px; border-radius: 10px;">Not Connected</span>
+            </div>
+            <p style="font-size: 11px; color: var(--text-secondary); margin: 0; line-height: 1.4;">
+              Save your account session once. StreamDock will remember it and download any Instagram Reel without needing browser extraction.
+            </p>
           </div>
+
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label class="form-label">Paste Instagram Cookie or Session ID</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="password" id="setting-instagram-cookie" class="form-input" placeholder="Paste sessionid=... or full cookie string" style="flex: 1;" />
+              <button id="btn-save-instagram-session" class="card-btn primary" style="white-space: nowrap; padding: 6px 14px;">
+                <span>Save Account</span>
+              </button>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+              <span style="font-size: 10px; color: var(--text-muted);">Saved locally on your machine. Never shared.</span>
+              <button id="btn-clear-instagram-session" style="background: none; border: none; color: #ff5c8a; font-size: 10px; cursor: pointer; display: none;">Clear Account</button>
+            </div>
+          </div>
+
+          <details style="margin-top: 8px; font-size: 11px; color: var(--text-secondary); background: var(--bg-surface); padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+            <summary style="cursor: pointer; font-weight: 600; color: var(--accent);">📖 How to get your Instagram Session ID in 30 seconds</summary>
+            <ol style="margin: 8px 0 4px 18px; padding: 0; line-height: 1.5;">
+              <li>Open <strong>Instagram.com</strong> in Chrome, Edge, or Firefox and log in.</li>
+              <li>Press <strong>F12</strong> (or right-click ➔ <em>Inspect</em>) to open Developer Tools.</li>
+              <li>Go to <strong>Application</strong> tab (or <strong>Storage</strong> in Firefox) ➔ <strong>Cookies</strong> ➔ <code>https://www.instagram.com</code>.</li>
+              <li>Copy the value of <strong><code>sessionid</code></strong> and paste it above!</li>
+            </ol>
+          </details>
         </div>
 
         <div class="settings-section">
