@@ -261,11 +261,13 @@ function downloadWithYtDlp(options, cancellation) {
     }
 
     let finalMergedPath = '';
+    let recodedPath = '';
     let extractedAudioPath = '';
     let downloadedPath = '';
     let videoTitle = options.title || 'Media File';
     let rawStdout = '';
     let rawStderr = '';
+    const downloadStartTime = Date.now();
 
     const proc = spawn(ytDlpPath, args, {
       windowsHide: true
@@ -277,12 +279,41 @@ function downloadWithYtDlp(options, cancellation) {
     const mergerRegex = /\[Merger\]\s+Merging formats into\s+"([^"]+)"/;
     const extractAudioRegex = /\[ExtractAudio\]\s+Destination:\s+([^\r\n]+)/;
     const destRegex = /\[download\]\s+Destination:\s+([^\r\n]+)/;
+    // Post-processor output capture patterns
+    const videoConvertRegex = /\[VideoConvertor\]\s+Converting video[^;]*;\s*Destination:\s+([^\r\n]+)/;
+    const moveRegex = /\[MoveFiles\]\s+Moving file\s+"[^"]+"\s+to\s+"([^"]+)"/;
+    const fixupRegex = /\[FixupM3u8\]\s+(?:Fixing|Writing)[^"]*"([^"]+)"/;
+    const videoRemuxRegex = /\[VideoRemuxer\]\s+Remuxing video[^;]*;\s*Destination:\s+([^\r\n]+)/;
 
     proc.stdout.on('data', (chunk) => {
       const text = chunk.toString();
       rawStdout += text;
 
-      // Check for merger output (e.g. final video file)
+      // Capture VideoConvertor output (from --recode-video) — this is the FINAL file
+      const recodeMatch = text.match(videoConvertRegex);
+      if (recodeMatch && recodeMatch[1]) {
+        recodedPath = recodeMatch[1].trim();
+      }
+
+      // Capture VideoRemuxer output
+      const remuxMatch = text.match(videoRemuxRegex);
+      if (remuxMatch && remuxMatch[1]) {
+        recodedPath = remuxMatch[1].trim();
+      }
+
+      // Capture MoveFiles output (yt-dlp sometimes moves final file)
+      const moveMatch = text.match(moveRegex);
+      if (moveMatch && moveMatch[1]) {
+        recodedPath = moveMatch[1].trim();
+      }
+
+      // Capture FixupM3u8 output
+      const fixupMatch = text.match(fixupRegex);
+      if (fixupMatch && fixupMatch[1]) {
+        recodedPath = fixupMatch[1].trim();
+      }
+
+      // Check for merger output (e.g. final video file before recode)
       const mergeMatch = text.match(mergerRegex);
       if (mergeMatch && mergeMatch[1]) {
         finalMergedPath = mergeMatch[1].trim();
@@ -298,7 +329,7 @@ function downloadWithYtDlp(options, cancellation) {
       const destMatch = text.match(destRegex);
       if (destMatch && destMatch[1]) {
         const p = destMatch[1].trim();
-        // Avoid temporary format parts like *.f395.mp4
+        // Avoid temporary format parts like *.f395.mp4 or *.f251.webm
         if (!/\.f\d+\./.test(p)) {
           downloadedPath = p;
         }
@@ -359,16 +390,44 @@ function downloadWithYtDlp(options, cancellation) {
       }
 
       // Determine the true resolved file path
-      let resolvedFile = finalMergedPath || extractedAudioPath || downloadedPath;
+      // Priority: recodedPath (post-processing final) > finalMergedPath > extractedAudioPath > downloadedPath
+      let resolvedFile = '';
+      if (options.formatType === 'audio') {
+        // For audio downloads, prefer extracted audio path
+        resolvedFile = extractedAudioPath || recodedPath || downloadedPath;
+      } else {
+        // For video downloads, prefer post-processed/recoded path, then merged, skip audio-only paths
+        resolvedFile = recodedPath || finalMergedPath || downloadedPath;
+      }
+
+      // If the resolved path doesn't exist, try with the expected extension (recode may change .webm -> .mp4)
+      if (resolvedFile && !fs.existsSync(resolvedFile)) {
+        const expectedExt = options.formatType === 'audio' ? `.${options.audioFormat || 'mp3'}` : '.mp4';
+        const altPath = resolvedFile.replace(/\.[^.]+$/, expectedExt);
+        if (fs.existsSync(altPath)) {
+          resolvedFile = altPath;
+        }
+      }
 
       if (!resolvedFile || !fs.existsSync(resolvedFile)) {
-        // Fallback: search directory for matching extension
+        // Fallback: search directory for files created AFTER this download started
         try {
           const files = fs.readdirSync(options.destinationDir);
-          const ext = options.formatType === 'audio' ? `.${options.audioFormat || 'mp3'}` : '.mp4';
-          const match = files.find(f => f.endsWith(ext) && !f.endsWith('.part') && !f.endsWith('.ytdl'));
-          if (match) {
-            resolvedFile = path.join(options.destinationDir, match);
+          const expectedExt = options.formatType === 'audio' ? `.${options.audioFormat || 'mp3'}` : '.mp4';
+          const candidates = files
+            .filter(f => f.endsWith(expectedExt) && !f.endsWith('.part') && !f.endsWith('.ytdl'))
+            .map(f => {
+              const fullPath = path.join(options.destinationDir, f);
+              try {
+                const stat = fs.statSync(fullPath);
+                return { path: fullPath, mtime: stat.mtimeMs, size: stat.size };
+              } catch (e) { return null; }
+            })
+            .filter(c => c && c.mtime >= downloadStartTime - 5000 && c.size > 0)
+            .sort((a, b) => b.mtime - a.mtime);
+
+          if (candidates.length > 0) {
+            resolvedFile = candidates[0].path;
           }
         } catch (e) {
           console.warn('Fallback search error:', e);
