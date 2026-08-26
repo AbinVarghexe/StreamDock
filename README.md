@@ -8,10 +8,10 @@
   [![CEP Version](https://img.shields.io/badge/Adobe%20CEP-10.0--17.0-FF0033?style=for-the-badge&logo=adobe&logoColor=white)](https://github.com/Adobe-CEP)
   [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/AbinVarghexe/StreamDock)
   [![License](https://img.shields.io/badge/License-MIT-2ECC71?style=for-the-badge)](LICENSE)
-  [![Release](https://img.shields.io/badge/Release-v1.0.0-E056FD?style=for-the-badge&logo=github)](https://github.com/AbinVarghexe/StreamDock/releases/tag/v1.0.0)
+  [![Release](https://img.shields.io/badge/Release-v2.0.0-E056FD?style=for-the-badge&logo=github)](https://github.com/AbinVarghexe/StreamDock/releases/tag/v2.0.0)
 
   <p align="center">
-    <strong>The high-speed, integrated YouTube browser, video previewer, and media downloader built directly for Adobe Premiere Pro.</strong>
+    <strong>The high-speed, integrated YouTube &amp; Instagram Reel browser, video previewer, and media downloader built directly for Adobe Premiere Pro.</strong>
   </p>
 
   <p align="center">
@@ -92,7 +92,7 @@
 
 ### ⚡ 1-Click Automated Setup (Windows)
 
-1. Download **[`StreamDock-v1.0.0-Premiere-Pro-Extension.zip`](https://github.com/AbinVarghexe/StreamDock/releases/download/v1.0.0/StreamDock-v1.0.0-Premiere-Pro-Extension.zip)** from GitHub Releases.
+1. Download **[`StreamDock-v2.0.0-Premiere-Pro-Extension.zip`](https://github.com/AbinVarghexe/StreamDock/releases/download/v2.0.0/StreamDock-v2.0.0-Premiere-Pro-Extension.zip)** from GitHub Releases.
 2. Extract the `.zip` file.
 3. Double-click **`INSTALL.bat`** *(automatically enables Adobe CEP debug mode in Windows registry and deploys extension files)*.
 4. Open (or restart) **Adobe Premiere Pro**.

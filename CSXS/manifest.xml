@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ExtensionManifest Version="10.0"
   ExtensionBundleId="com.streamdock.youtube.downloader"
-  ExtensionBundleVersion="1.0.0"
-  ExtensionBundleName="StreamDock YouTube Downloader"
+  ExtensionBundleVersion="2.0.0"
+  ExtensionBundleName="StreamDock YouTube &amp; Instagram Downloader"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <ExtensionList>
-    <Extension Id="com.streamdock.youtube.downloader.panel" Version="1.0.0" />
+    <Extension Id="com.streamdock.youtube.downloader.panel" Version="2.0.0" />
   </ExtensionList>
 
   <ExecutionEnvironment>

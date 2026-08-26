@@ -1,7 +1,7 @@
 {
   "name": "streamdock-premiere-extension",
-  "version": "1.0.0",
-  "description": "Embedded YouTube Browser, Search and Media Downloader for Adobe Premiere Pro",
+  "version": "2.0.0",
+  "description": "Embedded YouTube & Instagram Reel Browser, Search, Preview and Media Downloader for Adobe Premiere Pro",
   "main": "index.html",
   "scripts": {
     "download:binaries": "node scripts/download-binaries.js",

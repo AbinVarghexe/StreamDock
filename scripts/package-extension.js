@@ -11,7 +11,7 @@ const { execSync } = require('child_process');
 const EXTENSION_ID = 'com.streamdock.youtube.downloader';
 const ROOT_DIR = path.resolve(__dirname, '..');
 const DIST_DIR = path.join(ROOT_DIR, 'dist');
-const PACKAGE_NAME = 'StreamDock-v1.0.0-Premiere-Pro-Extension';
+const PACKAGE_NAME = 'StreamDock-v2.0.0-Premiere-Pro-Extension';
 const PACKAGE_DIR = path.join(DIST_DIR, PACKAGE_NAME);
 const EXTENSION_PAYLOAD_DIR = path.join(PACKAGE_DIR, 'com.streamdock.youtube.downloader');
 
