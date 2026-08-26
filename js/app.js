@@ -49,7 +49,8 @@
       defaultQuality: '1080',
       defaultAudioFormat: 'mp3',
       autoImportBin: true,
-      autoInsertTimeline: false
+      autoInsertTimeline: false,
+      cookiesBrowser: ''
     }
   };
 
@@ -59,23 +60,34 @@
     viewSearch: document.getElementById('view-search'),
     viewDownloads: document.getElementById('view-downloads'),
     viewSettings: document.getElementById('view-settings'),
-    searchSection: document.getElementById('search-section'),
+
+    // Search Elements
     searchInput: document.getElementById('search-input'),
-    clearSearchBtn: document.getElementById('clear-search-btn'),
-    filterChips: document.querySelectorAll('.chip'),
-    resultsGrid: document.getElementById('results-grid'),
+    searchClearBtn: document.getElementById('search-clear-btn'),
+    searchFilterBtn: document.getElementById('search-filter-btn'),
+    searchFilterMenu: document.getElementById('search-filter-menu'),
+    filterChips: document.querySelectorAll('.filter-menu .chip'),
+    searchActionBtn: document.getElementById('search-action-btn'),
     searchSpinner: document.getElementById('search-spinner'),
-    searchEmpty: document.getElementById('search-empty'),
-    downloadsList: document.getElementById('downloads-list'),
-    downloadsEmpty: document.getElementById('downloads-empty'),
-    badgeDownloads: document.getElementById('badge-active-downloads'),
-    
+    searchResultsContainer: document.getElementById('search-results'),
+    searchEmptyState: document.getElementById('search-empty-state'),
+    searchHistoryContainer: document.getElementById('search-history-chips'),
+
+    // Downloads View Elements
+    downloadsListContainer: document.getElementById('downloads-list'),
+    downloadsEmptyState: document.getElementById('downloads-empty-state'),
+    downloadsBadge: document.getElementById('downloads-badge'),
+    btnClearCompleted: document.getElementById('btn-clear-completed'),
+
     // Modal Elements
     previewModal: document.getElementById('preview-modal'),
-    modalTitle: document.getElementById('modal-video-title'),
+    modalVideoTitle: document.getElementById('modal-video-title'),
+    modalChannelName: document.getElementById('modal-channel-name'),
+    modalPlayerContainer: document.getElementById('modal-player-container'),
     modalIframe: document.getElementById('modal-iframe'),
     modalVideoPlayer: document.getElementById('modal-video-player'),
     modalPlayerLoading: document.getElementById('modal-player-loading'),
+    modalPlayerOverlay: document.getElementById('modal-player-overlay'),
     modalSwitchPlayerBtn: document.getElementById('modal-switch-player-btn'),
     modalYtDlpBtn: document.getElementById('modal-ytdlp-btn'),
     modalEmbedStuckBanner: document.getElementById('modal-embed-stuck-banner'),
@@ -84,8 +96,8 @@
     modalFormatType: document.getElementById('modal-format-type'),
     modalQualityGroup: document.getElementById('modal-quality-group'),
     modalQualitySelect: document.getElementById('modal-quality-select'),
-    modalAudioGroup: document.getElementById('modal-audio-format-group'),
-    modalAudioSelect: document.getElementById('modal-audio-format-select'),
+    modalAudioGroup: document.getElementById('modal-audio-group'),
+    modalAudioSelect: document.getElementById('modal-audio-select'),
     modalAddToTimeline: document.getElementById('modal-add-to-timeline'),
     modalCloseBtn: document.getElementById('modal-close-btn'),
     modalCancelBtn: document.getElementById('modal-cancel-btn'),
@@ -97,10 +109,15 @@
     settingDefaultAudioFormat: document.getElementById('setting-default-audio-format'),
     settingAutoImportBin: document.getElementById('setting-auto-import-bin'),
     settingAutoInsertTimeline: document.getElementById('setting-auto-insert-timeline'),
+    settingCookiesBrowser: document.getElementById('setting-cookies-browser'),
     settingInstagramCookie: document.getElementById('setting-instagram-cookie'),
     btnSaveInstagramSession: document.getElementById('btn-save-instagram-session'),
     btnClearInstagramSession: document.getElementById('btn-clear-instagram-session'),
     accountStatusBadge: document.getElementById('account-status-badge'),
+    settingYoutubeCookie: document.getElementById('setting-youtube-cookie'),
+    btnSaveYoutubeSession: document.getElementById('btn-save-youtube-session'),
+    btnClearYoutubeSession: document.getElementById('btn-clear-youtube-session'),
+    youtubeStatusBadge: document.getElementById('youtube-status-badge'),
     statusYtDlp: document.getElementById('status-ytdlp'),
     statusFfmpeg: document.getElementById('status-ffmpeg'),
     toastContainer: document.getElementById('toast-container')
@@ -113,38 +130,64 @@
       if (saved) {
         state.settings = Object.assign(state.settings, JSON.parse(saved));
       }
-      // Clean up stale cookiesBrowser from old versions
-      if (state.settings.cookiesBrowser !== undefined) {
-        delete state.settings.cookiesBrowser;
-        localStorage.setItem('streamdock_settings', JSON.stringify(state.settings));
-      }
     } catch (e) {
       console.warn('Could not read settings from localStorage', e);
     }
 
-    elements.settingDefaultQuality.value = state.settings.defaultQuality;
-    elements.settingDefaultAudioFormat.value = state.settings.defaultAudioFormat;
-    elements.settingAutoImportBin.checked = state.settings.autoImportBin;
-    elements.settingAutoInsertTimeline.checked = state.settings.autoInsertTimeline;
-    elements.settingDownloadDir.value = state.settings.downloadDir;
+    elements.settingDefaultQuality.value = state.settings.defaultQuality || '1080';
+    elements.settingDefaultAudioFormat.value = state.settings.defaultAudioFormat || 'mp3';
+    elements.settingAutoImportBin.checked = state.settings.autoImportBin !== false;
+    elements.settingAutoInsertTimeline.checked = !!state.settings.autoInsertTimeline;
+    elements.settingDownloadDir.value = state.settings.downloadDir || '';
+    if (elements.settingCookiesBrowser) {
+      elements.settingCookiesBrowser.value = state.settings.cookiesBrowser || '';
+    }
     updateAccountStatusUI();
   }
 
   function updateAccountStatusUI() {
-    if (!elements.accountStatusBadge) return;
-    const isConnected = sessionManager && sessionManager.hasInstagramSession();
-    if (isConnected) {
-      elements.accountStatusBadge.textContent = 'Active (Logged In)';
-      elements.accountStatusBadge.style.color = '#2ECC71';
-      elements.accountStatusBadge.style.background = 'rgba(46, 204, 113, 0.15)';
-      if (elements.btnClearInstagramSession) elements.btnClearInstagramSession.style.display = 'block';
-      if (elements.settingInstagramCookie) elements.settingInstagramCookie.placeholder = 'Session active (paste to update)';
-    } else {
-      elements.accountStatusBadge.textContent = 'Not Connected';
-      elements.accountStatusBadge.style.color = 'var(--text-muted)';
-      elements.accountStatusBadge.style.background = 'var(--bg-input)';
-      if (elements.btnClearInstagramSession) elements.btnClearInstagramSession.style.display = 'none';
-      if (elements.settingInstagramCookie) elements.settingInstagramCookie.placeholder = 'Paste sessionid=... or full cookie string';
+    // Instagram Status
+    if (elements.accountStatusBadge) {
+      const isIgConnected = sessionManager && sessionManager.hasInstagramSession();
+      if (isIgConnected) {
+        elements.accountStatusBadge.textContent = 'Active (Logged In)';
+        elements.accountStatusBadge.style.color = '#2ECC71';
+        elements.accountStatusBadge.style.background = 'rgba(46, 204, 113, 0.15)';
+        if (elements.btnClearInstagramSession) elements.btnClearInstagramSession.style.display = 'block';
+        if (elements.settingInstagramCookie) elements.settingInstagramCookie.placeholder = 'Session active (paste to update)';
+      } else {
+        elements.accountStatusBadge.textContent = 'Not Connected';
+        elements.accountStatusBadge.style.color = 'var(--text-muted)';
+        elements.accountStatusBadge.style.background = 'var(--bg-input)';
+        if (elements.btnClearInstagramSession) elements.btnClearInstagramSession.style.display = 'none';
+        if (elements.settingInstagramCookie) elements.settingInstagramCookie.placeholder = 'Paste sessionid=... or full cookie string';
+      }
+    }
+
+    // YouTube Status
+    if (elements.youtubeStatusBadge) {
+      const hasYtCookie = sessionManager && sessionManager.hasYouTubeSession();
+      const hasBrowser = state.settings.cookiesBrowser;
+
+      if (hasYtCookie) {
+        elements.youtubeStatusBadge.textContent = 'Active (Custom Cookies)';
+        elements.youtubeStatusBadge.style.color = '#2ECC71';
+        elements.youtubeStatusBadge.style.background = 'rgba(46, 204, 113, 0.15)';
+        if (elements.btnClearYoutubeSession) elements.btnClearYoutubeSession.style.display = 'block';
+        if (elements.settingYoutubeCookie) elements.settingYoutubeCookie.placeholder = 'Cookies active (paste to update)';
+      } else if (hasBrowser) {
+        elements.youtubeStatusBadge.textContent = `Browser (${hasBrowser.toUpperCase()})`;
+        elements.youtubeStatusBadge.style.color = '#3498DB';
+        elements.youtubeStatusBadge.style.background = 'rgba(52, 152, 219, 0.15)';
+        if (elements.btnClearYoutubeSession) elements.btnClearYoutubeSession.style.display = 'none';
+        if (elements.settingYoutubeCookie) elements.settingYoutubeCookie.placeholder = 'Paste SID=... or full Netscape cookies';
+      } else {
+        elements.youtubeStatusBadge.textContent = 'None (Standard)';
+        elements.youtubeStatusBadge.style.color = 'var(--text-muted)';
+        elements.youtubeStatusBadge.style.background = 'var(--bg-input)';
+        if (elements.btnClearYoutubeSession) elements.btnClearYoutubeSession.style.display = 'none';
+        if (elements.settingYoutubeCookie) elements.settingYoutubeCookie.placeholder = 'Paste SID=... or full Netscape cookies';
+      }
     }
   }
 
@@ -155,7 +198,11 @@
       state.settings.autoImportBin = elements.settingAutoImportBin.checked;
       state.settings.autoInsertTimeline = elements.settingAutoInsertTimeline.checked;
       state.settings.downloadDir = elements.settingDownloadDir.value.trim();
+      if (elements.settingCookiesBrowser) {
+        state.settings.cookiesBrowser = elements.settingCookiesBrowser.value;
+      }
       localStorage.setItem('streamdock_settings', JSON.stringify(state.settings));
+      updateAccountStatusUI();
       showToast('Settings saved');
     } catch (e) {
       console.warn('Could not save settings', e);
@@ -587,6 +634,7 @@
         quality,
         audioFormat,
         destinationDir: destDir,
+        cookiesFromBrowser: state.settings.cookiesBrowser,
         onProgress: (p) => {
           downloadItem.percent = Math.round(p.percent);
           downloadItem.speed = p.speed;
@@ -873,7 +921,8 @@
       elements.settingDefaultAudioFormat,
       elements.settingAutoImportBin,
       elements.settingAutoInsertTimeline,
-      elements.settingDownloadDir
+      elements.settingDownloadDir,
+      elements.settingCookiesBrowser
     ].forEach((input) => {
       if (input) input.addEventListener('change', saveSettings);
     });
@@ -883,7 +932,7 @@
       elements.btnSaveInstagramSession.addEventListener('click', () => {
         const val = elements.settingInstagramCookie ? elements.settingInstagramCookie.value.trim() : '';
         if (!val) {
-          showToast('Please paste a cookie string or sessionid first', 'error');
+          showToast('Please paste an Instagram cookie or sessionid first', 'error');
           return;
         }
         if (sessionManager) {
@@ -901,6 +950,33 @@
           sessionManager.clearInstagramSession();
           updateAccountStatusUI();
           showToast('Instagram account session cleared', 'info');
+        }
+      });
+    }
+
+    // YouTube Session Save & Clear
+    if (elements.btnSaveYoutubeSession) {
+      elements.btnSaveYoutubeSession.addEventListener('click', () => {
+        const val = elements.settingYoutubeCookie ? elements.settingYoutubeCookie.value.trim() : '';
+        if (!val) {
+          showToast('Please paste a YouTube cookie string or SID first', 'error');
+          return;
+        }
+        if (sessionManager) {
+          sessionManager.saveYouTubeSession(val);
+          updateAccountStatusUI();
+          if (elements.settingYoutubeCookie) elements.settingYoutubeCookie.value = '';
+          showToast('YouTube cookies session saved!', 'success');
+        }
+      });
+    }
+
+    if (elements.btnClearYoutubeSession) {
+      elements.btnClearYoutubeSession.addEventListener('click', () => {
+        if (sessionManager) {
+          sessionManager.clearYouTubeSession();
+          updateAccountStatusUI();
+          showToast('YouTube session cookies cleared', 'info');
         }
       });
     }

@@ -47,11 +47,13 @@ function buildYtDlpDownloadArgs(url, options = {}) {
     args.push('--extractor-args', 'youtube:player_client=mweb,web_embedded,tv,android_vr,ios,android');
   }
 
-  // Cookie precedence: 1. explicit cookiesFile, 2. saved Instagram session file, 3. cookiesFromBrowser
+  // Cookie precedence: 1. explicit cookiesFile, 2. saved Instagram session file, 3. saved YouTube session file, 4. cookiesFromBrowser
   if (options.cookiesFile) {
     args.push('--cookies', options.cookiesFile);
   } else if (isIg && sessionManager && sessionManager.hasInstagramSession()) {
     args.push('--cookies', sessionManager.getInstagramSessionFilePath());
+  } else if (!isIg && sessionManager && sessionManager.hasYouTubeSession()) {
+    args.push('--cookies', sessionManager.getYouTubeSessionFilePath());
   } else if (cookiesFromBrowser) {
     args.push('--cookies-from-browser', cookiesFromBrowser);
   }
