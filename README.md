@@ -155,6 +155,12 @@ Place the `com.streamdock.youtube.downloader` folder into:
 
 ## ✨ Features & Capabilities
 
+<div align="center">
+  <img src="assets/streamdock-features.svg" alt="StreamDock Core Capabilities &amp; Features Matrix" width="100%" />
+</div>
+
+<br/>
+
 | Feature | Details | Benefit for Editors |
 | :--- | :--- | :--- |
 | **🔍 High-Speed InnerTube Search** | Direct YouTube client search without requiring Google Cloud API keys or rate quotas. | Zero configuration, instantaneous results, unlimited queries. |
@@ -177,6 +183,13 @@ Place the `com.streamdock.youtube.downloader` folder into:
 - Click on any thumbnail card to open the **Preview & Download Modal**.
 
 ### 2. Downloading Instagram Reels
+
+<div align="center">
+  <img src="assets/streamdock-instagram-workflow.svg" alt="Instagram Reels to Premiere Pro Workflow" width="100%" />
+</div>
+
+<br/>
+
 - Copy any Instagram link from your browser or mobile app:
   ```text
   https://www.instagram.com/reel/C8xxxxxxxx/
