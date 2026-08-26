@@ -389,48 +389,69 @@ function downloadWithYtDlp(options, cancellation) {
         return reject(new Error(`Download failed: ${errMsg}`));
       }
 
-      // Determine the true resolved file path
-      // Priority: recodedPath (post-processing final) > finalMergedPath > extractedAudioPath > downloadedPath
+      // 1. Direct priority check from captured stdout paths
       let resolvedFile = '';
       if (options.formatType === 'audio') {
-        // For audio downloads, prefer extracted audio path
         resolvedFile = extractedAudioPath || recodedPath || downloadedPath;
       } else {
-        // For video downloads, prefer post-processed/recoded path, then merged, skip audio-only paths
         resolvedFile = recodedPath || finalMergedPath || downloadedPath;
       }
 
-      // If the resolved path doesn't exist, try with the expected extension (recode may change .webm -> .mp4)
-      if (resolvedFile && !fs.existsSync(resolvedFile)) {
+      // Check if direct resolved path exists on disk
+      if (resolvedFile && fs.existsSync(resolvedFile)) {
+        // Exists!
+      } else if (resolvedFile) {
+        // Try common audio/video extension replacements (.webm -> .mp4, .m4a -> .mp3)
         const expectedExt = options.formatType === 'audio' ? `.${options.audioFormat || 'mp3'}` : '.mp4';
         const altPath = resolvedFile.replace(/\.[^.]+$/, expectedExt);
         if (fs.existsSync(altPath)) {
           resolvedFile = altPath;
+        } else {
+          resolvedFile = '';
         }
       }
 
+      // 2. Fallback: Parse video ID from URL and search destination folder
       if (!resolvedFile || !fs.existsSync(resolvedFile)) {
-        // Fallback: search directory for files created AFTER this download started
+        const idMatch = (options.url || '').match(/(?:v=|\/embed\/|\/v\/|youtu\.be\/|\/shorts\/|\/reel\/|\/p\/|^)([A-Za-z0-9_-]{8,})/);
+        const mediaId = idMatch ? idMatch[1] : '';
+
         try {
           const files = fs.readdirSync(options.destinationDir);
-          const expectedExt = options.formatType === 'audio' ? `.${options.audioFormat || 'mp3'}` : '.mp4';
-          const candidates = files
-            .filter(f => f.endsWith(expectedExt) && !f.endsWith('.part') && !f.endsWith('.ytdl'))
+          
+          // Filter out temp / partial files
+          const validFiles = files
+            .filter(f => !f.endsWith('.part') && !f.endsWith('.ytdl') && !/\.f\d+\./.test(f))
             .map(f => {
               const fullPath = path.join(options.destinationDir, f);
               try {
                 const stat = fs.statSync(fullPath);
-                return { path: fullPath, mtime: stat.mtimeMs, size: stat.size };
+                return { name: f, path: fullPath, mtime: stat.mtimeMs, size: stat.size };
               } catch (e) { return null; }
             })
-            .filter(c => c && c.mtime >= downloadStartTime - 5000 && c.size > 0)
-            .sort((a, b) => b.mtime - a.mtime);
+            .filter(c => c && c.size > 0);
 
-          if (candidates.length > 0) {
-            resolvedFile = candidates[0].path;
+          // Sub-check A: File containing video/media ID
+          if (mediaId) {
+            const idCandidates = validFiles
+              .filter(c => c.name.includes(mediaId))
+              .sort((a, b) => b.mtime - a.mtime);
+            if (idCandidates.length > 0) {
+              resolvedFile = idCandidates[0].path;
+            }
+          }
+
+          // Sub-check B: Newest media file in destination directory
+          if (!resolvedFile || !fs.existsSync(resolvedFile)) {
+            const mediaCandidates = validFiles
+              .filter(c => /\.(mp4|mkv|webm|mov|mp3|wav|m4a|aac|ogg|flac)$/i.test(c.name))
+              .sort((a, b) => b.mtime - a.mtime);
+            if (mediaCandidates.length > 0) {
+              resolvedFile = mediaCandidates[0].path;
+            }
           }
         } catch (e) {
-          console.warn('Fallback search error:', e);
+          console.warn('[StreamDock] Directory search fallback error:', e);
         }
       }
 
