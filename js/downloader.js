@@ -349,7 +349,7 @@ function downloadWithYtDlp(options, cancellation) {
         let errMsg = rawStderr || rawStdout || `Exit code ${code}`;
         if (errMsg.includes('login required') || errMsg.includes('Requested content is not available') || errMsg.includes('rate-limit reached')) {
           errMsg = 'Instagram authentication required for this Reel. You can save your account session in Settings.';
-        } else if (errMsg.includes('DPAPI') || errMsg.includes('Failed to decrypt with DPAPI')) {
+        } else if (errMsg.includes('DPAPI') || errMsg.includes('Failed to decrypt with DPAPI') || errMsg.includes('Could not copy Chrome cookie database')) {
           errMsg = 'Chrome/Edge on Windows blocked cookie decryption. You can save your account session in Settings.';
         } else if (errMsg.includes('HTTP Error 403') || errMsg.includes('403: Forbidden')) {
           errMsg = 'Access forbidden (403). Content might be geo-restricted or rate-limited.';

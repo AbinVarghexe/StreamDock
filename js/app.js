@@ -49,8 +49,7 @@
       defaultQuality: '1080',
       defaultAudioFormat: 'mp3',
       autoImportBin: true,
-      autoInsertTimeline: false,
-      cookiesBrowser: ''
+      autoInsertTimeline: false
     }
   };
 
@@ -113,6 +112,11 @@
       const saved = localStorage.getItem('streamdock_settings');
       if (saved) {
         state.settings = Object.assign(state.settings, JSON.parse(saved));
+      }
+      // Clean up stale cookiesBrowser from old versions
+      if (state.settings.cookiesBrowser !== undefined) {
+        delete state.settings.cookiesBrowser;
+        localStorage.setItem('streamdock_settings', JSON.stringify(state.settings));
       }
     } catch (e) {
       console.warn('Could not read settings from localStorage', e);
@@ -243,9 +247,7 @@
       // 1. Check if user pasted an Instagram Reel or post URL
       if (instagramExtractor && instagramExtractor.isInstagramUrl(query)) {
         showToast('Fetching Instagram Reel...', 'info');
-        const reel = await instagramExtractor.getReelMetadata(query, {
-          cookiesBrowser: state.settings.cookiesBrowser
-        });
+        const reel = await instagramExtractor.getReelMetadata(query, {});
         state.searchResults = [reel];
         renderSearchResults([reel]);
         return;
@@ -445,7 +447,7 @@
     }
 
     const platform = video.platform || 'youtube';
-    const proxiedUrl = previewServer.getProxiedStreamUrl(video.id, platform, state.settings.cookiesBrowser);
+    const proxiedUrl = previewServer.getProxiedStreamUrl(video.id, platform);
     if (!proxiedUrl) {
       elements.modalPlayerLoading.classList.remove('active');
       showToast('Could not resolve stream URL for media', 'error');
@@ -585,7 +587,6 @@
         quality,
         audioFormat,
         destinationDir: destDir,
-        cookiesFromBrowser: state.settings.cookiesBrowser,
         onProgress: (p) => {
           downloadItem.percent = Math.round(p.percent);
           downloadItem.speed = p.speed;
