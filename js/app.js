@@ -109,15 +109,10 @@
     settingDefaultAudioFormat: document.getElementById('setting-default-audio-format'),
     settingAutoImportBin: document.getElementById('setting-auto-import-bin'),
     settingAutoInsertTimeline: document.getElementById('setting-auto-insert-timeline'),
-    settingCookiesBrowser: document.getElementById('setting-cookies-browser'),
     settingInstagramCookie: document.getElementById('setting-instagram-cookie'),
     btnSaveInstagramSession: document.getElementById('btn-save-instagram-session'),
     btnClearInstagramSession: document.getElementById('btn-clear-instagram-session'),
     accountStatusBadge: document.getElementById('account-status-badge'),
-    settingYoutubeCookie: document.getElementById('setting-youtube-cookie'),
-    btnSaveYoutubeSession: document.getElementById('btn-save-youtube-session'),
-    btnClearYoutubeSession: document.getElementById('btn-clear-youtube-session'),
-    youtubeStatusBadge: document.getElementById('youtube-status-badge'),
     statusYtDlp: document.getElementById('status-ytdlp'),
     statusFfmpeg: document.getElementById('status-ffmpeg'),
     toastContainer: document.getElementById('toast-container')
@@ -139,55 +134,24 @@
     elements.settingAutoImportBin.checked = state.settings.autoImportBin !== false;
     elements.settingAutoInsertTimeline.checked = !!state.settings.autoInsertTimeline;
     elements.settingDownloadDir.value = state.settings.downloadDir || '';
-    if (elements.settingCookiesBrowser) {
-      elements.settingCookiesBrowser.value = state.settings.cookiesBrowser || '';
-    }
     updateAccountStatusUI();
   }
 
   function updateAccountStatusUI() {
-    // Instagram Status
-    if (elements.accountStatusBadge) {
-      const isIgConnected = sessionManager && sessionManager.hasInstagramSession();
-      if (isIgConnected) {
-        elements.accountStatusBadge.textContent = 'Active (Logged In)';
-        elements.accountStatusBadge.style.color = '#2ECC71';
-        elements.accountStatusBadge.style.background = 'rgba(46, 204, 113, 0.15)';
-        if (elements.btnClearInstagramSession) elements.btnClearInstagramSession.style.display = 'block';
-        if (elements.settingInstagramCookie) elements.settingInstagramCookie.placeholder = 'Session active (paste to update)';
-      } else {
-        elements.accountStatusBadge.textContent = 'Not Connected';
-        elements.accountStatusBadge.style.color = 'var(--text-muted)';
-        elements.accountStatusBadge.style.background = 'var(--bg-input)';
-        if (elements.btnClearInstagramSession) elements.btnClearInstagramSession.style.display = 'none';
-        if (elements.settingInstagramCookie) elements.settingInstagramCookie.placeholder = 'Paste sessionid=... or full cookie string';
-      }
-    }
-
-    // YouTube Status
-    if (elements.youtubeStatusBadge) {
-      const hasYtCookie = sessionManager && sessionManager.hasYouTubeSession();
-      const hasBrowser = state.settings.cookiesBrowser;
-
-      if (hasYtCookie) {
-        elements.youtubeStatusBadge.textContent = 'Active (Custom Cookies)';
-        elements.youtubeStatusBadge.style.color = '#2ECC71';
-        elements.youtubeStatusBadge.style.background = 'rgba(46, 204, 113, 0.15)';
-        if (elements.btnClearYoutubeSession) elements.btnClearYoutubeSession.style.display = 'block';
-        if (elements.settingYoutubeCookie) elements.settingYoutubeCookie.placeholder = 'Cookies active (paste to update)';
-      } else if (hasBrowser) {
-        elements.youtubeStatusBadge.textContent = `Browser (${hasBrowser.toUpperCase()})`;
-        elements.youtubeStatusBadge.style.color = '#3498DB';
-        elements.youtubeStatusBadge.style.background = 'rgba(52, 152, 219, 0.15)';
-        if (elements.btnClearYoutubeSession) elements.btnClearYoutubeSession.style.display = 'none';
-        if (elements.settingYoutubeCookie) elements.settingYoutubeCookie.placeholder = 'Paste SID=... or full Netscape cookies';
-      } else {
-        elements.youtubeStatusBadge.textContent = 'None (Standard)';
-        elements.youtubeStatusBadge.style.color = 'var(--text-muted)';
-        elements.youtubeStatusBadge.style.background = 'var(--bg-input)';
-        if (elements.btnClearYoutubeSession) elements.btnClearYoutubeSession.style.display = 'none';
-        if (elements.settingYoutubeCookie) elements.settingYoutubeCookie.placeholder = 'Paste SID=... or full Netscape cookies';
-      }
+    if (!elements.accountStatusBadge) return;
+    const isIgConnected = sessionManager && sessionManager.hasInstagramSession();
+    if (isIgConnected) {
+      elements.accountStatusBadge.textContent = 'Active (Logged In)';
+      elements.accountStatusBadge.style.color = '#2ECC71';
+      elements.accountStatusBadge.style.background = 'rgba(46, 204, 113, 0.15)';
+      if (elements.btnClearInstagramSession) elements.btnClearInstagramSession.style.display = 'block';
+      if (elements.settingInstagramCookie) elements.settingInstagramCookie.placeholder = 'Session active (paste to update)';
+    } else {
+      elements.accountStatusBadge.textContent = 'Not Connected';
+      elements.accountStatusBadge.style.color = 'var(--text-muted)';
+      elements.accountStatusBadge.style.background = 'var(--bg-input)';
+      if (elements.btnClearInstagramSession) elements.btnClearInstagramSession.style.display = 'none';
+      if (elements.settingInstagramCookie) elements.settingInstagramCookie.placeholder = 'Paste sessionid=... or full cookie string';
     }
   }
 
@@ -198,11 +162,7 @@
       state.settings.autoImportBin = elements.settingAutoImportBin.checked;
       state.settings.autoInsertTimeline = elements.settingAutoInsertTimeline.checked;
       state.settings.downloadDir = elements.settingDownloadDir.value.trim();
-      if (elements.settingCookiesBrowser) {
-        state.settings.cookiesBrowser = elements.settingCookiesBrowser.value;
-      }
       localStorage.setItem('streamdock_settings', JSON.stringify(state.settings));
-      updateAccountStatusUI();
       showToast('Settings saved');
     } catch (e) {
       console.warn('Could not save settings', e);
@@ -954,32 +914,7 @@
       });
     }
 
-    // YouTube Session Save & Clear
-    if (elements.btnSaveYoutubeSession) {
-      elements.btnSaveYoutubeSession.addEventListener('click', () => {
-        const val = elements.settingYoutubeCookie ? elements.settingYoutubeCookie.value.trim() : '';
-        if (!val) {
-          showToast('Please paste a YouTube cookie string or SID first', 'error');
-          return;
-        }
-        if (sessionManager) {
-          sessionManager.saveYouTubeSession(val);
-          updateAccountStatusUI();
-          if (elements.settingYoutubeCookie) elements.settingYoutubeCookie.value = '';
-          showToast('YouTube cookies session saved!', 'success');
-        }
-      });
-    }
 
-    if (elements.btnClearYoutubeSession) {
-      elements.btnClearYoutubeSession.addEventListener('click', () => {
-        if (sessionManager) {
-          sessionManager.clearYouTubeSession();
-          updateAccountStatusUI();
-          showToast('YouTube session cookies cleared', 'info');
-        }
-      });
-    }
 
     // Sidestream-compatible bridge message handler
     // Receives {sidestreamPreview:"youtube_embed", type, videoId, details} from bridge HTML

@@ -392,7 +392,7 @@ function downloadWithYtDlp(options, cancellation) {
         // Format friendly error message
         let errMsg = rawStderr || rawStdout || `Exit code ${code}`;
         if (errMsg.includes('Sign in to confirm you') || errMsg.includes('confirm you\'re not a bot') || errMsg.includes('Sign in to confirm')) {
-          errMsg = 'YouTube requires bot verification for this video. In Settings, select a browser or save your session cookies.';
+          errMsg = 'YouTube bot verification required for this video. Please try again shortly.';
         } else if (errMsg.includes('login required') || errMsg.includes('Requested content is not available') || errMsg.includes('rate-limit reached')) {
           errMsg = 'Instagram authentication required for this Reel. You can save your account session in Settings.';
         } else if (errMsg.includes('DPAPI') || errMsg.includes('Failed to decrypt with DPAPI') || errMsg.includes('Could not copy Chrome cookie database')) {
