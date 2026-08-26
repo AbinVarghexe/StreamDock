@@ -69,6 +69,10 @@ function extractWithYtDlp(url, options = {}) {
 
     execFile(ytDlpPath, args, { windowsHide: true, timeout: 15000 }, (err, stdout, stderr) => {
       if (err || !stdout.trim()) {
+        if (options.cookiesBrowser && (stderr.includes('DPAPI') || stderr.includes('Failed to decrypt with DPAPI'))) {
+          console.warn('[StreamDock] DPAPI failed in metadata extractor. Retrying without browser cookies...');
+          return extractWithYtDlp(url, Object.assign({}, options, { cookiesBrowser: '' })).then(resolve).catch(reject);
+        }
         return reject(new Error(stderr || err?.message || 'Failed to extract with yt-dlp'));
       }
 

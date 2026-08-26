@@ -44,7 +44,9 @@ function buildYtDlpDownloadArgs(url, options = {}) {
     args.push('--extractor-args', 'youtube:player_client=mweb,web_embedded,tv,android_vr,ios,android');
   }
 
-  if (cookiesFromBrowser) {
+  if (options.cookiesFile) {
+    args.push('--cookies', options.cookiesFile);
+  } else if (cookiesFromBrowser) {
     args.push('--cookies-from-browser', cookiesFromBrowser);
   }
 

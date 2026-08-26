@@ -147,7 +147,24 @@ function downloadMedia(options) {
       }
 
       if (code !== 0) {
-        return reject(new Error(`Download process failed (exit code ${code}): ${rawStderr || rawStdout}`));
+        // 1. Auto-retry without browser cookies if DPAPI decryption failed (Windows Chrome/Edge 127+ App-Bound encryption)
+        if (options.cookiesFromBrowser && (rawStderr.includes('DPAPI') || rawStderr.includes('Failed to decrypt with DPAPI'))) {
+          console.warn('[StreamDock] Windows DPAPI browser cookie extraction failed. Retrying download directly without browser cookies...');
+          const retryOptions = Object.assign({}, options, { cookiesFromBrowser: '' });
+          return downloadMedia(retryOptions).then(resolve).catch(reject);
+        }
+
+        // 2. Format friendly error message
+        let errMsg = rawStderr || rawStdout || `Exit code ${code}`;
+        if (errMsg.includes('login required') || errMsg.includes('Requested content is not available') || errMsg.includes('rate-limit reached')) {
+          errMsg = 'Instagram authentication required for this Reel. In Settings, select Firefox or provide a cookies.txt file.';
+        } else if (errMsg.includes('DPAPI') || errMsg.includes('Failed to decrypt with DPAPI')) {
+          errMsg = 'Chrome/Edge on Windows blocked cookie decryption. In Settings, select Firefox or provide a cookies.txt file.';
+        } else if (errMsg.includes('HTTP Error 403') || errMsg.includes('403: Forbidden')) {
+          errMsg = 'Access forbidden (403). Content might be geo-restricted or rate-limited.';
+        }
+
+        return reject(new Error(errMsg));
       }
 
       // Determine the true resolved file path
