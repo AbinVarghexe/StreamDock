@@ -594,9 +594,13 @@
         }
       });
 
-      downloadItem.cancellation = dlRequest.cancellation;
+      downloadItem.cancellation = dlRequest.cancellation || dlRequest;
 
-      const result = await dlRequest.promise;
+      const result = dlRequest && dlRequest.promise ? await dlRequest.promise : await dlRequest;
+      if (!result || !result.filePath) {
+        throw new Error('Download failed: output file not found');
+      }
+
       downloadItem.status = 'completed';
       downloadItem.percent = 100;
       downloadItem.filePath = result.filePath;

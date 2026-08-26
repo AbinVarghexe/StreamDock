@@ -206,20 +206,27 @@ function downloadDirectInstagram(options) {
  *   - cookiesFromBrowser: string
  *   - onProgress: (progressData) => void
  *   - onStatus: (statusText) => void
- * @returns {Promise<{ filePath: string, title: string }>}
+ * @returns {{ promise: Promise<{ filePath: string, title: string }>, cancellation: DownloadCancellation, cancel: () => void }}
  */
 function downloadMedia(options) {
   const cancellation = options.cancellation || new DownloadCancellation();
 
+  let promise;
   // If this is an Instagram URL, prioritize direct no-login fast download
   if (instagramExtractor.isInstagramUrl(options.url)) {
-    return downloadDirectInstagram(options).catch((directErr) => {
+    promise = downloadDirectInstagram(Object.assign({}, options, { cancellation })).catch((directErr) => {
       console.warn('[StreamDock] Direct Instagram stream failed, falling back to yt-dlp:', directErr.message);
       return downloadWithYtDlp(options, cancellation);
     });
+  } else {
+    promise = downloadWithYtDlp(options, cancellation);
   }
 
-  return downloadWithYtDlp(options, cancellation);
+  return {
+    promise,
+    cancellation,
+    cancel: () => cancellation.cancel()
+  };
 }
 
 /**
