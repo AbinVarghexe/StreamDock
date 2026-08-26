@@ -52,11 +52,11 @@ function getYtDlpPath() {
 
 function getFfmpegPath() {
   // 1. Check local bundled ffmpeg
-  const bundledWin = path.join(BINARIES_DIR, 'ffmpeg', 'win32-x64', 'ffmpeg.exe');
-  if (fs.existsSync(bundledWin)) return bundledWin;
-
   const bundledRoot = path.join(BINARIES_DIR, 'ffmpeg.exe');
   if (fs.existsSync(bundledRoot)) return bundledRoot;
+
+  const bundledWin = path.join(BINARIES_DIR, 'ffmpeg', 'win32-x64', 'ffmpeg.exe');
+  if (fs.existsSync(bundledWin)) return bundledWin;
 
   // 2. Check user's designated bin directory
   const userDevBin = 'D:\\DEV\\Adobe Plugins\\bin\\ffmpeg.exe';

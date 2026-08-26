@@ -255,9 +255,9 @@ function downloadWithYtDlp(options, cancellation) {
       cookiesFromBrowser: options.cookiesFromBrowser
     });
 
-    // Provide ffmpeg location to yt-dlp
+    // Provide exact ffmpeg binary location to yt-dlp
     if (fs.existsSync(ffmpegPath)) {
-      args.unshift('--ffmpeg-location', ffmpegDir);
+      args.unshift('--ffmpeg-location', ffmpegPath);
     }
 
     let finalMergedPath = '';
@@ -280,25 +280,38 @@ function downloadWithYtDlp(options, cancellation) {
     const extractAudioRegex = /\[ExtractAudio\]\s+Destination:\s+([^\r\n]+)/;
     const destRegex = /\[download\]\s+Destination:\s+([^\r\n]+)/;
     // Post-processor output capture patterns
-    const videoConvertRegex = /\[VideoConvertor\]\s+Converting video[^;]*;\s*Destination:\s+([^\r\n]+)/;
+    // Matches both: [VideoConvertor] Converting video...; Destination: path
+    //           and: [VideoConvertor] Not converting media file "path"; already is in target format
+    const videoConvertDestRegex = /\[VideoConvertor\]\s+Converting video[^;]*;\s*Destination:\s+([^\r\n]+)/;
+    const videoConvertNoopRegex = /\[VideoConvertor\]\s+Not converting media file\s+"([^"]+)"/;
     const moveRegex = /\[MoveFiles\]\s+Moving file\s+"[^"]+"\s+to\s+"([^"]+)"/;
     const fixupRegex = /\[FixupM3u8\]\s+(?:Fixing|Writing)[^"]*"([^"]+)"/;
-    const videoRemuxRegex = /\[VideoRemuxer\]\s+Remuxing video[^;]*;\s*Destination:\s+([^\r\n]+)/;
+    const videoRemuxDestRegex = /\[VideoRemuxer\]\s+Remuxing video[^;]*;\s*Destination:\s+([^\r\n]+)/;
+    const videoRemuxNoopRegex = /\[VideoRemuxer\]\s+Not remuxing media file\s+"([^"]+)"/;
 
     proc.stdout.on('data', (chunk) => {
       const text = chunk.toString();
       rawStdout += text;
 
       // Capture VideoConvertor output (from --recode-video) — this is the FINAL file
-      const recodeMatch = text.match(videoConvertRegex);
-      if (recodeMatch && recodeMatch[1]) {
-        recodedPath = recodeMatch[1].trim();
+      // Matches: "Converting video...; Destination: path" OR "Not converting media file "path""
+      const recodeDestMatch = text.match(videoConvertDestRegex);
+      if (recodeDestMatch && recodeDestMatch[1]) {
+        recodedPath = recodeDestMatch[1].trim();
+      }
+      const recodeNoopMatch = text.match(videoConvertNoopRegex);
+      if (recodeNoopMatch && recodeNoopMatch[1]) {
+        recodedPath = recodeNoopMatch[1].trim();
       }
 
       // Capture VideoRemuxer output
-      const remuxMatch = text.match(videoRemuxRegex);
-      if (remuxMatch && remuxMatch[1]) {
-        recodedPath = remuxMatch[1].trim();
+      const remuxDestMatch = text.match(videoRemuxDestRegex);
+      if (remuxDestMatch && remuxDestMatch[1]) {
+        recodedPath = remuxDestMatch[1].trim();
+      }
+      const remuxNoopMatch = text.match(videoRemuxNoopRegex);
+      if (remuxNoopMatch && remuxNoopMatch[1]) {
+        recodedPath = remuxNoopMatch[1].trim();
       }
 
       // Capture MoveFiles output (yt-dlp sometimes moves final file)
