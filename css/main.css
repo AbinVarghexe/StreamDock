@@ -247,6 +247,8 @@ body {
 .chip:hover {
   background: var(--bg-surface-hover);
   color: var(--text-primary);
+}
+
 .chip.active {
   background: var(--accent-subtle);
   border-color: var(--accent);
