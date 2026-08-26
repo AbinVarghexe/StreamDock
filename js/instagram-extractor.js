@@ -1,10 +1,13 @@
 /**
  * instagram-extractor.js
  * High-speed Instagram Reels & Video metadata extractor and streaming resolver for StreamDock.
+ * Multi-tiered extraction: Instant Direct Web Resolver (No Login) -> Saved Session -> yt-dlp.
  */
 
-const { execFile, spawn } = require('child_process');
 const https = require('https');
+const http = require('http');
+const vm = require('vm');
+const { execFile } = require('child_process');
 const binaryManager = require('./binary-manager');
 const sessionManager = require('./session-manager');
 
@@ -48,10 +51,133 @@ function normalizeInstagramUrl(url) {
 }
 
 /**
- * Extracts Instagram Reel metadata using yt-dlp --dump-json
+ * Decodes obfuscated JavaScript response from public resolver
+ * @param {string} scriptText
+ * @returns {string|null} Unpacked HTML
+ */
+function decodeResolverScript(scriptText) {
+  try {
+    const evalIdx = scriptText.lastIndexOf('eval(');
+    if (evalIdx === -1) return null;
+
+    const beforeEval = scriptText.substring(0, evalIdx);
+    const evalCall = scriptText.substring(evalIdx);
+    const transformed = beforeEval + ';\nvar __unpacked_code = ' + evalCall.replace(/^eval\(/, '(');
+
+    let capturedHtml = '';
+    const sandbox = {
+      window: { location: { hostname: 'snapsave.app' } },
+      document: {
+        getElementById: () => ({
+          set innerHTML(val) { capturedHtml = val; }
+        })
+      },
+      Math: Math,
+      Date: Date
+    };
+
+    vm.createContext(sandbox);
+    vm.runInContext(transformed, sandbox, { timeout: 2500 });
+
+    if (sandbox.__unpacked_code) {
+      try {
+        vm.runInContext(sandbox.__unpacked_code, sandbox, { timeout: 2500 });
+      } catch (e) {}
+    }
+
+    return capturedHtml;
+  } catch (err) {
+    return null;
+  }
+}
+
+/**
+ * Tier 1: Instant Direct Public Resolver (No Login Required)
+ * @param {string} url
+ * @returns {Promise<object>}
+ */
+function extractWithDirectResolver(url) {
+  return new Promise((resolve, reject) => {
+    const shortcode = getShortcode(url) || 'reel';
+    const postData = 'url=' + encodeURIComponent(normalizeInstagramUrl(url));
+
+    const req = https.request({
+      hostname: 'snapsave.app',
+      path: '/action.php',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(postData),
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Referer': 'https://snapsave.app/',
+        'Origin': 'https://snapsave.app'
+      },
+      timeout: 8000
+    }, (res) => {
+      let body = '';
+      res.on('data', chunk => body += chunk);
+      res.on('end', () => {
+        try {
+          const html = decodeResolverScript(body);
+          if (!html) {
+            return reject(new Error('Could not unpack resolver response'));
+          }
+
+          // Extract direct video URL
+          let videoUrl = '';
+          const hrefMatches = html.matchAll(/href=["']([^"']+)["']/gi);
+          for (const m of hrefMatches) {
+            const link = m[1];
+            if (link.includes('download') || link.includes('rapidcdn.app') || link.includes('.mp4') || link.includes('fbcdn.net')) {
+              videoUrl = link.replace(/&amp;/g, '&');
+              break;
+            }
+          }
+
+          // Extract thumbnail URL
+          let thumbUrl = '';
+          const imgMatch = html.match(/<img[^>]+src=["']([^"']+)["']/i);
+          if (imgMatch) {
+            thumbUrl = imgMatch[1].replace(/&amp;/g, '&');
+          }
+
+          if (!videoUrl) {
+            return reject(new Error('No direct video link found in resolver'));
+          }
+
+          resolve({
+            id: shortcode,
+            url: `https://www.instagram.com/reel/${shortcode}/`,
+            title: `Instagram Reel [${shortcode}]`,
+            channel: '@instagram_creator',
+            duration: '0:30',
+            views: 'Instagram Reel',
+            publishedTime: '',
+            thumbnail: thumbUrl || `https://www.instagram.com/p/${shortcode}/media/?size=l`,
+            videoUrl: videoUrl,
+            directDownloadUrl: videoUrl,
+            platform: 'instagram'
+          });
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+
+    req.on('error', reject);
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Resolver request timed out'));
+    });
+    req.write(postData);
+    req.end();
+  });
+}
+
+/**
+ * Tier 2: Extraction via yt-dlp (with saved session or cookies)
  * @param {string} url
  * @param {object} options
- *   - cookiesBrowser: string (e.g. 'chrome', 'edge', 'firefox', 'brave')
  * @returns {Promise<object>}
  */
 function extractWithYtDlp(url, options = {}) {
@@ -73,7 +199,6 @@ function extractWithYtDlp(url, options = {}) {
     execFile(ytDlpPath, args, { windowsHide: true, timeout: 15000 }, (err, stdout, stderr) => {
       if (err || !stdout.trim()) {
         if (options.cookiesBrowser && (stderr.includes('DPAPI') || stderr.includes('Failed to decrypt with DPAPI'))) {
-          console.warn('[StreamDock] DPAPI failed in metadata extractor. Retrying without browser cookies...');
           return extractWithYtDlp(url, Object.assign({}, options, { cookiesBrowser: '' })).then(resolve).catch(reject);
         }
         return reject(new Error(stderr || err?.message || 'Failed to extract with yt-dlp'));
@@ -98,6 +223,7 @@ function extractWithYtDlp(url, options = {}) {
           publishedTime: data.upload_date ? formatDate(data.upload_date) : '',
           thumbnail: thumbnail,
           videoUrl: videoUrl,
+          directDownloadUrl: videoUrl,
           platform: 'instagram'
         });
       } catch (e) {
@@ -108,35 +234,7 @@ function extractWithYtDlp(url, options = {}) {
 }
 
 /**
- * Fast public fallback metadata extractor using oEmbed / public page
- * @param {string} url
- * @returns {Promise<object>}
- */
-function extractPublicFallback(url) {
-  const shortcode = getShortcode(url);
-  if (!shortcode) {
-    return Promise.reject(new Error('Invalid Instagram URL'));
-  }
-
-  return new Promise((resolve) => {
-    // Generate a fallback structured object so user can preview and initiate download
-    resolve({
-      id: shortcode,
-      url: `https://www.instagram.com/reel/${shortcode}/`,
-      title: `Instagram Reel [${shortcode}]`,
-      channel: '@instagram_user',
-      duration: 'Reel',
-      views: 'Instagram Reel',
-      publishedTime: '',
-      thumbnail: `https://www.instagram.com/p/${shortcode}/media/?size=l`,
-      videoUrl: '',
-      platform: 'instagram'
-    });
-  });
-}
-
-/**
- * Gets rich metadata for an Instagram Reel
+ * Gets rich metadata for an Instagram Reel using Tier 1 -> Tier 2 -> Tier 3
  * @param {string} url
  * @param {object} options
  * @returns {Promise<object>}
@@ -147,18 +245,38 @@ async function getReelMetadata(url, options = {}) {
     throw new Error('Invalid Instagram Reel URL');
   }
 
-  const cacheKey = shortcode + (options.cookiesBrowser || '');
+  const cacheKey = shortcode;
   const cached = metadataCache.get(cacheKey);
   if (cached && Date.now() - cached.time < CACHE_TTL_MS) {
     return cached.data;
   }
 
   let metadata;
+  // Try Tier 1 (Direct public resolver - no login needed)
   try {
-    metadata = await extractWithYtDlp(url, options);
-  } catch (err) {
-    console.warn('yt-dlp Instagram extraction fallback:', err.message);
-    metadata = await extractPublicFallback(url);
+    metadata = await extractWithDirectResolver(url);
+  } catch (err1) {
+    console.warn('[StreamDock] Tier 1 Instagram resolver error:', err1.message);
+    // Try Tier 2 (yt-dlp with session)
+    try {
+      metadata = await extractWithYtDlp(url, options);
+    } catch (err2) {
+      console.warn('[StreamDock] Tier 2 yt-dlp Instagram extraction error:', err2.message);
+      // Tier 3: fallback card
+      metadata = {
+        id: shortcode,
+        url: `https://www.instagram.com/reel/${shortcode}/`,
+        title: `Instagram Reel [${shortcode}]`,
+        channel: '@instagram_user',
+        duration: 'Reel',
+        views: 'Instagram Reel',
+        publishedTime: '',
+        thumbnail: `https://www.instagram.com/p/${shortcode}/media/?size=l`,
+        videoUrl: '',
+        directDownloadUrl: '',
+        platform: 'instagram'
+      };
+    }
   }
 
   metadataCache.set(cacheKey, { data: metadata, time: Date.now() });
@@ -167,7 +285,6 @@ async function getReelMetadata(url, options = {}) {
 
 function cleanCaption(text) {
   if (!text) return 'Instagram Reel';
-  // Strip long hashtags for display title if too lengthy
   let clean = text.split('\n')[0].trim();
   if (clean.length > 80) {
     clean = clean.substring(0, 80) + '...';
@@ -195,5 +312,6 @@ module.exports = {
   isInstagramUrl,
   getShortcode,
   normalizeInstagramUrl,
-  getReelMetadata
+  getReelMetadata,
+  extractWithDirectResolver
 };
