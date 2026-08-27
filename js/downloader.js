@@ -139,13 +139,28 @@ function downloadDirectInstagram(options) {
           fileStream.on('finish', () => {
             fileStream.close(async () => {
               try {
-                // Post-process with FFmpeg to ensure full Premiere Pro native compatibility (H.264/AAC)
                 const ffmpegPath = binaryManager.getFfmpegPath();
                 if (fs.existsSync(ffmpegPath)) {
-                  if (options.onStatus) options.onStatus('Optimizing codecs for Premiere Pro...');
-                  const ffmpegArgs = options.formatType === 'audio'
-                    ? ['-y', '-i', tempFilePath, '-vn', '-c:a', 'libmp3lame', '-q:a', '2', finalFilePath]
-                    : ['-y', '-i', tempFilePath, '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', finalFilePath];
+                  if (options.onStatus) options.onStatus('Transcoding to Premiere Pro H.264/AAC MP4...');
+                  let ffmpegArgs = [];
+                  if (options.formatType === 'audio') {
+                    if (options.audioFormat === 'wav') {
+                      ffmpegArgs = ['-y', '-i', tempFilePath, '-vn', '-c:a', 'pcm_s16le', finalFilePath];
+                    } else {
+                      ffmpegArgs = ['-y', '-i', tempFilePath, '-vn', '-c:a', 'libmp3lame', '-q:a', '2', finalFilePath];
+                    }
+                  } else {
+                    ffmpegArgs = [
+                      '-y',
+                      '-i', tempFilePath,
+                      '-c:v', 'libx264',
+                      '-preset', 'veryfast',
+                      '-pix_fmt', 'yuv420p',
+                      '-c:a', 'aac',
+                      '-b:a', '192k',
+                      finalFilePath
+                    ];
+                  }
 
                   execFile(ffmpegPath, ffmpegArgs, { windowsHide: true }, (err) => {
                     try { if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath); } catch (e) {}

@@ -60,8 +60,8 @@ function buildYtDlpDownloadArgs(url, options = {}) {
     args.push('--audio-quality', '0');
     args.push('-f', 'bestaudio[acodec^=mp4a]/bestaudio/best');
   } else if (isIg) {
-    // Instagram video mode: direct best MP4 or standard H.264 video
-    args.push('-f', 'bestvideo+bestaudio/best[ext=mp4]/best');
+    // Instagram video mode: Prioritize standard H.264 (avc1) + AAC (mp4a), and force transcode if needed
+    args.push('-f', 'bv*[vcodec^=avc1]+ba[acodec^=mp4a]/bv*[vcodec^=avc]+ba/bv*[ext=mp4]+ba[ext=m4a]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best');
     args.push('--merge-output-format', 'mp4');
     args.push('--recode-video', 'mp4');
     args.push('--postprocessor-args', 'VideoConvertor:-c:v libx264 -pix_fmt yuv420p -c:a aac');
