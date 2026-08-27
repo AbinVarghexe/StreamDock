@@ -95,6 +95,21 @@
     modalCancelBtn: document.getElementById('modal-cancel-btn'),
     modalStartDownloadBtn: document.getElementById('modal-start-download-btn'),
 
+    // Player Controls & Seeker
+    modalPlayerControls: document.getElementById('modal-player-controls'),
+    modalSeekerSlider: document.getElementById('modal-seeker-slider'),
+    modalSeekerProgress: document.getElementById('modal-seeker-progress'),
+    modalBtnPlayPause: document.getElementById('modal-btn-play-pause'),
+    iconPlay: document.getElementById('icon-play'),
+    iconPause: document.getElementById('icon-pause'),
+    modalBtnSeekBack: document.getElementById('modal-btn-seek-back'),
+    modalBtnSeekForward: document.getElementById('modal-btn-seek-forward'),
+    modalTimeCurrent: document.getElementById('modal-time-current'),
+    modalTimeDuration: document.getElementById('modal-time-duration'),
+    modalBtnMute: document.getElementById('modal-btn-mute'),
+    iconVolHigh: document.getElementById('icon-vol-high'),
+    iconVolMute: document.getElementById('icon-vol-mute'),
+
     // Settings Elements
     settingDownloadDir: document.getElementById('setting-download-dir'),
     settingDefaultQuality: document.getElementById('setting-default-quality'),
@@ -337,6 +352,146 @@
   const youtubeEmbedBlockedVideos = {}; // tracks video IDs where owner disabled embedding
   let embedStuckBannerTimer = null; // shows "Video stuck?" banner after a delay
 
+  // Timeline Seeker & Playback State
+  let isUserSeeking = false;
+  let currentTotalDuration = 0;
+  let currentPlaybackTime = 0;
+
+  function formatTime(seconds) {
+    if (!seconds || isNaN(seconds) || seconds < 0) return '00:00';
+    seconds = Math.floor(seconds);
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    const h = Math.floor(m / 60);
+    if (h > 0) {
+      const remM = m % 60;
+      return `${h}:${remM < 10 ? '0' : ''}${remM}:${s < 10 ? '0' : ''}${s}`;
+    }
+    return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+  }
+
+  function parseDurationToSeconds(str) {
+    if (!str || typeof str !== 'string') return 0;
+    const parts = str.split(':').map(Number);
+    if (parts.some(isNaN)) return 0;
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    if (parts.length === 1) return parts[0];
+    return 0;
+  }
+
+  function resetSeekerUI() {
+    isUserSeeking = false;
+    currentPlaybackTime = 0;
+    currentTotalDuration = 0;
+    if (elements.modalSeekerSlider) elements.modalSeekerSlider.value = 0;
+    if (elements.modalSeekerProgress) elements.modalSeekerProgress.style.width = '0%';
+    if (elements.modalTimeCurrent) elements.modalTimeCurrent.textContent = '00:00';
+    if (elements.modalTimeDuration) elements.modalTimeDuration.textContent = '--:--';
+    updatePlayPauseButtonUI(false);
+  }
+
+  function updatePlayPauseButtonUI(isPlaying) {
+    if (!elements.iconPlay || !elements.iconPause) return;
+    if (isPlaying) {
+      elements.iconPlay.style.display = 'none';
+      elements.iconPause.style.display = 'inline-block';
+    } else {
+      elements.iconPlay.style.display = 'inline-block';
+      elements.iconPause.style.display = 'none';
+    }
+  }
+
+  function updateMuteButtonUI(isMuted) {
+    if (!elements.iconVolHigh || !elements.iconVolMute) return;
+    if (isMuted) {
+      elements.iconVolHigh.style.display = 'none';
+      elements.iconVolMute.style.display = 'inline-block';
+    } else {
+      elements.iconVolHigh.style.display = 'inline-block';
+      elements.iconVolMute.style.display = 'none';
+    }
+  }
+
+  function syncPlaybackState(currentTime, duration, isPlaying) {
+    currentPlaybackTime = Math.max(0, Number(currentTime) || 0);
+    if (Number(duration) > 0) {
+      currentTotalDuration = Number(duration);
+    } else if (!currentTotalDuration && state.selectedVideo && state.selectedVideo.duration) {
+      currentTotalDuration = parseDurationToSeconds(state.selectedVideo.duration);
+    }
+
+    if (typeof isPlaying === 'boolean') {
+      updatePlayPauseButtonUI(isPlaying);
+    }
+
+    if (elements.modalTimeCurrent) {
+      elements.modalTimeCurrent.textContent = formatTime(currentPlaybackTime);
+    }
+
+    if (elements.modalTimeDuration) {
+      elements.modalTimeDuration.textContent = currentTotalDuration > 0 ? formatTime(currentTotalDuration) : '--:--';
+    }
+
+    if (!isUserSeeking && elements.modalSeekerSlider && currentTotalDuration > 0) {
+      const pct = Math.min(100, Math.max(0, (currentPlaybackTime / currentTotalDuration) * 100));
+      elements.modalSeekerSlider.value = pct;
+      if (elements.modalSeekerProgress) {
+        elements.modalSeekerProgress.style.width = pct + '%';
+      }
+    }
+  }
+
+  function performSeek(targetTime) {
+    const validTarget = Math.max(0, Math.min(currentTotalDuration || 36000, targetTime));
+    currentPlaybackTime = validTarget;
+    syncPlaybackState(validTarget, currentTotalDuration);
+
+    if (currentPlayerMode === 'direct') {
+      if (elements.modalVideoPlayer) {
+        try {
+          elements.modalVideoPlayer.currentTime = validTarget;
+        } catch (e) {}
+      }
+    } else if (currentPlayerMode === 'embed') {
+      if (elements.modalIframe && elements.modalIframe.contentWindow && state.selectedVideo) {
+        try {
+          elements.modalIframe.contentWindow.postMessage({
+            sidestreamPreviewCommand: 'youtube_embed',
+            videoId: state.selectedVideo.id,
+            command: 'seekTo',
+            args: [validTarget, true]
+          }, '*');
+        } catch (e) {}
+      }
+    }
+  }
+
+  function togglePlayPause() {
+    if (currentPlayerMode === 'direct') {
+      if (!elements.modalVideoPlayer) return;
+      if (elements.modalVideoPlayer.paused) {
+        elements.modalVideoPlayer.play().catch(() => {});
+        updatePlayPauseButtonUI(true);
+      } else {
+        elements.modalVideoPlayer.pause();
+        updatePlayPauseButtonUI(false);
+      }
+    } else if (currentPlayerMode === 'embed') {
+      if (elements.modalIframe && elements.modalIframe.contentWindow && state.selectedVideo) {
+        const isCurrentlyPlaying = elements.iconPause && elements.iconPause.style.display !== 'none';
+        const cmd = isCurrentlyPlaying ? 'pauseVideo' : 'playVideo';
+        elements.modalIframe.contentWindow.postMessage({
+          sidestreamPreviewCommand: 'youtube_embed',
+          videoId: state.selectedVideo.id,
+          command: cmd,
+          args: []
+        }, '*');
+        updatePlayPauseButtonUI(!isCurrentlyPlaying);
+      }
+    }
+  }
+
   function hideBanner() {
     if (embedStuckBannerTimer) { clearTimeout(embedStuckBannerTimer); embedStuckBannerTimer = null; }
     if (elements.modalEmbedStuckBanner) elements.modalEmbedStuckBanner.style.display = 'none';
@@ -373,6 +528,14 @@
     state.selectedVideo = video;
     elements.modalTitle.textContent = video.title;
     
+    resetSeekerUI();
+    if (video.duration) {
+      currentTotalDuration = parseDurationToSeconds(video.duration);
+      if (elements.modalTimeDuration && currentTotalDuration > 0) {
+        elements.modalTimeDuration.textContent = formatTime(currentTotalDuration);
+      }
+    }
+
     elements.modalQualitySelect.value = state.settings.defaultQuality;
     elements.modalAudioSelect.value = state.settings.defaultAudioFormat;
     elements.modalAddToTimeline.checked = state.settings.autoInsertTimeline;
@@ -533,6 +696,7 @@
 
   function closePreviewModal() {
     previewAbortToken = null;
+    resetSeekerUI();
     elements.modalIframe.src = '';
     elements.modalVideoPlayer.pause();
     elements.modalVideoPlayer.removeAttribute('src');
@@ -811,6 +975,98 @@
       });
     });
 
+    // Seeker & Playback Control Events
+    if (elements.modalSeekerSlider) {
+      elements.modalSeekerSlider.addEventListener('input', (e) => {
+        isUserSeeking = true;
+        const pct = Number(e.target.value) || 0;
+        if (elements.modalSeekerProgress) {
+          elements.modalSeekerProgress.style.width = pct + '%';
+        }
+        if (currentTotalDuration > 0) {
+          const previewTime = (pct / 100) * currentTotalDuration;
+          if (elements.modalTimeCurrent) {
+            elements.modalTimeCurrent.textContent = formatTime(previewTime);
+          }
+        }
+      });
+
+      elements.modalSeekerSlider.addEventListener('change', (e) => {
+        const pct = Number(e.target.value) || 0;
+        if (currentTotalDuration > 0) {
+          const targetSec = (pct / 100) * currentTotalDuration;
+          performSeek(targetSec);
+        }
+        setTimeout(() => { isUserSeeking = false; }, 200);
+      });
+    }
+
+    if (elements.modalBtnPlayPause) {
+      elements.modalBtnPlayPause.addEventListener('click', togglePlayPause);
+    }
+
+    if (elements.modalBtnSeekBack) {
+      elements.modalBtnSeekBack.addEventListener('click', () => {
+        performSeek(currentPlaybackTime - 10);
+      });
+    }
+
+    if (elements.modalBtnSeekForward) {
+      elements.modalBtnSeekForward.addEventListener('click', () => {
+        performSeek(currentPlaybackTime + 10);
+      });
+    }
+
+    if (elements.modalBtnMute) {
+      elements.modalBtnMute.addEventListener('click', () => {
+        if (currentPlayerMode === 'direct') {
+          if (!elements.modalVideoPlayer) return;
+          elements.modalVideoPlayer.muted = !elements.modalVideoPlayer.muted;
+          updateMuteButtonUI(elements.modalVideoPlayer.muted);
+        } else if (currentPlayerMode === 'embed') {
+          if (elements.modalIframe && elements.modalIframe.contentWindow && state.selectedVideo) {
+            const isMuted = elements.iconVolMute && elements.iconVolMute.style.display !== 'none';
+            const cmd = isMuted ? 'unMute' : 'mute';
+            elements.modalIframe.contentWindow.postMessage({
+              sidestreamPreviewCommand: 'youtube_embed',
+              videoId: state.selectedVideo.id,
+              command: cmd,
+              args: []
+            }, '*');
+            updateMuteButtonUI(!isMuted);
+          }
+        }
+      });
+    }
+
+    // Direct Video Player Events
+    if (elements.modalVideoPlayer) {
+      elements.modalVideoPlayer.addEventListener('timeupdate', () => {
+        if (!isUserSeeking) {
+          syncPlaybackState(elements.modalVideoPlayer.currentTime, elements.modalVideoPlayer.duration);
+        }
+      });
+
+      elements.modalVideoPlayer.addEventListener('loadedmetadata', () => {
+        if (elements.modalVideoPlayer.duration && isFinite(elements.modalVideoPlayer.duration)) {
+          currentTotalDuration = elements.modalVideoPlayer.duration;
+          syncPlaybackState(elements.modalVideoPlayer.currentTime, elements.modalVideoPlayer.duration);
+        }
+      });
+
+      elements.modalVideoPlayer.addEventListener('play', () => {
+        updatePlayPauseButtonUI(true);
+      });
+
+      elements.modalVideoPlayer.addEventListener('pause', () => {
+        updatePlayPauseButtonUI(false);
+      });
+
+      elements.modalVideoPlayer.addEventListener('ended', () => {
+        updatePlayPauseButtonUI(false);
+      });
+    }
+
     // Modal Events
     elements.modalCloseBtn.addEventListener('click', closePreviewModal);
     elements.modalCancelBtn.addEventListener('click', closePreviewModal);
@@ -929,11 +1185,14 @@
 
         // playerState: -1=unstarted, 0=ended, 1=playing, 2=paused, 3=buffering, 5=cued
         const playerState = typeof details.playerState === 'number' ? details.playerState : -1;
+        const isPlaying = (playerState === 1 || playerState === 3);
         
-        if (playerState === 1 || playerState === 3) {
+        if (isPlaying) {
           // Video is genuinely playing/buffering — hide the stuck banner
           hideBanner();
         }
+
+        syncPlaybackState(details.currentTime, details.duration, isPlaying);
         return;
       }
 

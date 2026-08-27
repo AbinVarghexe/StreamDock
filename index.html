@@ -274,7 +274,7 @@
           <iframe id="modal-iframe" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"></iframe>
           
           <!-- Native Direct Stream Mode -->
-          <video id="modal-video-player" class="modal-video-player" controls playsinline style="display: none;"></video>
+          <video id="modal-video-player" class="modal-video-player" playsinline style="display: none;"></video>
           
           <div id="modal-player-loading" class="modal-player-loading">
             <div class="spinner"></div>
@@ -289,6 +289,43 @@
               <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5,3 19,12 5,21"/></svg>
               Play with yt-dlp
             </button>
+          </div>
+        </div>
+
+        <!-- Video Seek & Scrubbing Control Bar -->
+        <div id="modal-player-controls" class="modal-player-controls">
+          <!-- Interactive Timeline Scrubber -->
+          <div class="modal-seeker-container">
+            <input type="range" id="modal-seeker-slider" class="modal-seeker-slider" min="0" max="100" value="0" step="0.1" title="Slide to scrub video position" />
+            <div id="modal-seeker-progress" class="modal-seeker-progress"></div>
+          </div>
+          <!-- Playback Controls Row -->
+          <div class="modal-controls-row">
+            <div class="modal-controls-left">
+              <button id="modal-btn-play-pause" class="ctrl-btn" title="Play / Pause">
+                <svg id="icon-play" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+                <svg id="icon-pause" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="display: none;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+              </button>
+              <button id="modal-btn-seek-back" class="ctrl-btn" title="Rewind 10 seconds">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+                <span>-10s</span>
+              </button>
+              <button id="modal-btn-seek-forward" class="ctrl-btn" title="Forward 10 seconds">
+                <span>+10s</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+              </button>
+              <div class="modal-time-display">
+                <span id="modal-time-current">00:00</span>
+                <span style="color: var(--text-muted);">/</span>
+                <span id="modal-time-duration">--:--</span>
+              </div>
+            </div>
+            <div class="modal-controls-right">
+              <button id="modal-btn-mute" class="ctrl-btn icon-only" title="Mute / Unmute">
+                <svg id="icon-vol-high" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                <svg id="icon-vol-mute" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+              </button>
+            </div>
           </div>
         </div>
 
