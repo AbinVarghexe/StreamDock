@@ -17,7 +17,8 @@
  */
 
 const http = require('http');
-const { spawn } = require('child_process');
+const https = require('https');
+const { spawn, execFile } = require('child_process');
 const { URL } = require('url');
 
 let previewBridgeServer = null;
@@ -25,6 +26,8 @@ let previewBridgeOrigin = '';
 
 // Active streaming processes: key -> child_process
 const activeStreamProcesses = new Map();
+// Cache of resolved direct CDN URLs: key -> { url, expires }
+const streamUrlCache = new Map();
 
 function isValidMediaId(id) {
   return /^[A-Za-z0-9_-]{5,30}$/.test(String(id || ''));
@@ -65,9 +68,125 @@ function sendResponse(response, statusCode, contentType, body) {
   response.end(body);
 }
 
-// ─── Direct yt-dlp MP4 Stream Pipeline ────────────────────────────────────────
+// ─── Direct CDN URL Resolution & Range Proxy ─────────────────────────────────
+
+function resolveDirectStreamUrl(mediaId, platform = 'youtube', cookiesBrowser = '') {
+  const cacheKey = `${platform}_${mediaId}`;
+  const cached = streamUrlCache.get(cacheKey);
+  if (cached && cached.expires > Date.now()) {
+    return Promise.resolve(cached.url);
+  }
+
+  const ytDlpPath = getYtDlpPath();
+  let mediaUrl = '';
+  const args = [
+    '--no-playlist',
+    '--no-warnings',
+    '--quiet',
+    '-g'
+  ];
+
+  if (platform === 'instagram') {
+    mediaUrl = `https://www.instagram.com/reel/${mediaId}/`;
+    args.push('-f', 'bestvideo+bestaudio/best[ext=mp4]/best');
+    try {
+      const sessionManager = require('./session-manager');
+      if (sessionManager.hasInstagramSession()) {
+        args.push('--cookies', sessionManager.getInstagramSessionFilePath());
+      } else if (cookiesBrowser) {
+        args.push('--cookies-from-browser', cookiesBrowser);
+      }
+    } catch (e) {
+      if (cookiesBrowser) args.push('--cookies-from-browser', cookiesBrowser);
+    }
+  } else {
+    mediaUrl = `https://www.youtube.com/watch?v=${mediaId}`;
+    args.push('--extractor-args', 'youtube:player_client=android,mweb');
+    args.push('-f', '18/best[ext=mp4]/best');
+  }
+
+  args.push(mediaUrl);
+
+  return new Promise((resolve, reject) => {
+    execFile(ytDlpPath, args, { windowsHide: true }, (err, stdout, stderr) => {
+      if (err) return reject(err);
+      const lines = stdout.trim().split('\n').map(l => l.trim()).filter(Boolean);
+      const directUrl = lines[0] || '';
+      if (!directUrl || !directUrl.startsWith('http')) {
+        return reject(new Error('No valid direct stream URL extracted'));
+      }
+      // Cache URL for 2 hours
+      streamUrlCache.set(cacheKey, { url: directUrl, expires: Date.now() + 2 * 3600 * 1000 });
+      resolve(directUrl);
+    });
+  });
+}
+
+function proxyDirectUrl(request, response, directUrl) {
+  try {
+    const parsed = new URL(directUrl);
+    const clientReq = (parsed.protocol === 'https:' ? https : http).request({
+      protocol: parsed.protocol,
+      hostname: parsed.hostname,
+      port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+      path: parsed.pathname + parsed.search,
+      method: request.method || 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        ...(request.headers.range ? { 'Range': request.headers.range } : {})
+      }
+    }, (upstreamRes) => {
+      const statusCode = upstreamRes.statusCode || 200;
+      const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Range, Origin, Accept, Content-Type',
+        'Accept-Ranges': 'bytes',
+        'Cache-Control': 'no-cache, no-store'
+      };
+
+      if (upstreamRes.headers['content-type']) headers['Content-Type'] = upstreamRes.headers['content-type'];
+      if (upstreamRes.headers['content-length']) headers['Content-Length'] = upstreamRes.headers['content-length'];
+      if (upstreamRes.headers['content-range']) headers['Content-Range'] = upstreamRes.headers['content-range'];
+
+      response.writeHead(statusCode, headers);
+      upstreamRes.pipe(response);
+
+      request.on('close', () => {
+        try { upstreamRes.destroy(); } catch (e) {}
+      });
+    });
+
+    clientReq.on('error', (err) => {
+      console.warn('[StreamDock Proxy Error]:', err.message);
+      if (!response.headersSent) {
+        sendResponse(response, 502, 'text/plain', 'Stream proxy error: ' + err.message);
+      }
+    });
+
+    clientReq.end();
+  } catch (err) {
+    if (!response.headersSent) {
+      sendResponse(response, 500, 'text/plain', 'Proxy error: ' + err.message);
+    }
+  }
+}
+
+// ─── Direct Stream Pipeline with Range Seeking ───────────────────────────────
 
 function handleDirectStreamRequest(request, response, mediaId, platform = 'youtube', cookiesBrowser = '') {
+  // First attempt: direct URL proxy with full HTTP Range seek support
+  resolveDirectStreamUrl(mediaId, platform, cookiesBrowser)
+    .then((directUrl) => {
+      proxyDirectUrl(request, response, directUrl);
+    })
+    .catch((err) => {
+      console.warn(`[StreamDock] Direct URL resolution failed for ${mediaId}, falling back to pipe:`, err.message);
+      // Fallback: spawn stdout pipe
+      fallbackPipeStream(request, response, mediaId, platform, cookiesBrowser);
+    });
+}
+
+function fallbackPipeStream(request, response, mediaId, platform = 'youtube', cookiesBrowser = '') {
   const ytDlpPath = getYtDlpPath();
   const processKey = `${platform}_${mediaId}`;
   
@@ -94,62 +213,41 @@ function handleDirectStreamRequest(request, response, mediaId, platform = 'youtu
   } else {
     mediaUrl = `https://www.youtube.com/watch?v=${mediaId}`;
     args.push('--extractor-args', 'youtube:player_client=android,mweb');
-    args.push('-f', '18/b/ba/best[ext=mp4]/best');
+    args.push('-f', '18/best[ext=mp4]/best');
   }
 
   args.push('-o', '-', mediaUrl);
 
-  // Kill any previous stream for this mediaId to avoid duplicate bandwidth
   if (activeStreamProcesses.has(processKey)) {
-    try {
-      activeStreamProcesses.get(processKey).kill();
-    } catch (e) {}
+    try { activeStreamProcesses.get(processKey).kill(); } catch (e) {}
     activeStreamProcesses.delete(processKey);
   }
 
   response.writeHead(200, {
     'Content-Type': 'video/mp4',
     'Access-Control-Allow-Origin': '*',
-    'Cache-Control': 'no-cache, no-store',
-    'Connection': 'keep-alive'
+    'Accept-Ranges': 'bytes',
+    'Cache-Control': 'no-cache, no-store'
   });
 
-  console.log(`[StreamDock] Starting direct stream pipe for ${platform} ${mediaId}...`);
   const proc = spawn(ytDlpPath, args, { windowsHide: true });
   activeStreamProcesses.set(processKey, proc);
 
   proc.stdout.pipe(response);
 
-  proc.stderr.on('data', (data) => {
-    const msg = data.toString().trim();
-    if (msg) {
-      console.warn(`[StreamDock yt-dlp pipe ${mediaId}]:`, msg);
-    }
-  });
-
-  proc.on('close', (code) => {
+  proc.on('close', () => {
     activeStreamProcesses.delete(processKey);
-    if (!response.writableEnded) {
-      response.end();
-    }
+    if (!response.writableEnded) response.end();
   });
 
-  proc.on('error', (err) => {
+  proc.on('error', (e) => {
     activeStreamProcesses.delete(processKey);
-    console.error(`[StreamDock yt-dlp spawn error ${mediaId}]:`, err);
-    if (!response.headersSent) {
-      sendResponse(response, 500, 'text/plain', 'Stream error: ' + err.message);
-    } else {
-      response.destroy();
-    }
+    if (!response.headersSent) sendResponse(response, 500, 'text/plain', 'Stream error: ' + e.message);
   });
 
-  // When client disconnects / modal closes / switches video, kill the child process immediately
   request.on('close', () => {
     if (activeStreamProcesses.get(processKey) === proc) {
-      try {
-        proc.kill();
-      } catch (e) {}
+      try { proc.kill(); } catch (e) {}
       activeStreamProcesses.delete(processKey);
     }
   });
@@ -219,6 +317,16 @@ function buildYouTubeBridgeHtml(videoId) {
     'var data=event&&event.data?event.data:null;' +
     'if(!data||data.sidestreamPreviewCommand!=="youtube_embed"||data.videoId!==videoId)return;' +
     'if(data.command==="requestState"){sendState();return;}' +
+    'if(data.command==="seekTo"){' +
+    'try{' +
+    'if(player&&typeof player.seekTo==="function"){' +
+    'var target=safeNumber(data.args&&data.args[0]);' +
+    'player.seekTo(target,true);' +
+    'sendState();' +
+    '}' +
+    '}catch(e){}' +
+    'return;' +
+    '}' +
     'try{if(player&&typeof player[data.command]==="function")player[data.command].apply(player,data.args||[]);}catch(e){}' +
     '});' +
     'apiTimeoutId=window.setTimeout(function(){if(playerReady)return;send("api_timeout",{});},8000);' +

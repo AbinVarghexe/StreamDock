@@ -95,20 +95,25 @@
     modalCancelBtn: document.getElementById('modal-cancel-btn'),
     modalStartDownloadBtn: document.getElementById('modal-start-download-btn'),
 
-    // Player Controls & Seeker
+    // YouTube Player Controls & Scrubber
     modalPlayerControls: document.getElementById('modal-player-controls'),
-    modalSeekerSlider: document.getElementById('modal-seeker-slider'),
-    modalSeekerProgress: document.getElementById('modal-seeker-progress'),
+    ytScrubberWrap: document.getElementById('yt-scrubber-wrap'),
+    ytScrubberHoverTime: document.getElementById('yt-scrubber-hover-time'),
+    ytProgressBuffer: document.getElementById('yt-progress-buffer'),
+    ytProgressPlayed: document.getElementById('yt-progress-played'),
+    ytScrubberHandle: document.getElementById('yt-scrubber-handle'),
     modalBtnPlayPause: document.getElementById('modal-btn-play-pause'),
     iconPlay: document.getElementById('icon-play'),
     iconPause: document.getElementById('icon-pause'),
     modalBtnSeekBack: document.getElementById('modal-btn-seek-back'),
     modalBtnSeekForward: document.getElementById('modal-btn-seek-forward'),
-    modalTimeCurrent: document.getElementById('modal-time-current'),
-    modalTimeDuration: document.getElementById('modal-time-duration'),
     modalBtnMute: document.getElementById('modal-btn-mute'),
     iconVolHigh: document.getElementById('icon-vol-high'),
     iconVolMute: document.getElementById('icon-vol-mute'),
+    ytVolumeSlider: document.getElementById('yt-volume-slider'),
+    modalTimeCurrent: document.getElementById('modal-time-current'),
+    modalTimeDuration: document.getElementById('modal-time-duration'),
+    ytModeIndicator: document.getElementById('yt-mode-indicator'),
 
     // Settings Elements
     settingDownloadDir: document.getElementById('setting-download-dir'),
@@ -354,11 +359,12 @@
 
   // Timeline Seeker & Playback State
   let isUserSeeking = false;
+  let lastSeekTimestamp = 0;
   let currentTotalDuration = 0;
   let currentPlaybackTime = 0;
 
   function formatTime(seconds) {
-    if (!seconds || isNaN(seconds) || seconds < 0) return '00:00';
+    if (!seconds || isNaN(seconds) || seconds < 0) return '0:00';
     seconds = Math.floor(seconds);
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -367,7 +373,7 @@
       const remM = m % 60;
       return `${h}:${remM < 10 ? '0' : ''}${remM}:${s < 10 ? '0' : ''}${s}`;
     }
-    return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
   }
 
   function parseDurationToSeconds(str) {
@@ -382,12 +388,14 @@
 
   function resetSeekerUI() {
     isUserSeeking = false;
+    lastSeekTimestamp = 0;
     currentPlaybackTime = 0;
     currentTotalDuration = 0;
-    if (elements.modalSeekerSlider) elements.modalSeekerSlider.value = 0;
-    if (elements.modalSeekerProgress) elements.modalSeekerProgress.style.width = '0%';
-    if (elements.modalTimeCurrent) elements.modalTimeCurrent.textContent = '00:00';
-    if (elements.modalTimeDuration) elements.modalTimeDuration.textContent = '--:--';
+    if (elements.ytProgressPlayed) elements.ytProgressPlayed.style.width = '0%';
+    if (elements.ytProgressBuffer) elements.ytProgressBuffer.style.width = '0%';
+    if (elements.ytScrubberHandle) elements.ytScrubberHandle.style.left = '0%';
+    if (elements.modalTimeCurrent) elements.modalTimeCurrent.textContent = '0:00';
+    if (elements.modalTimeDuration) elements.modalTimeDuration.textContent = '0:00';
     updatePlayPauseButtonUI(false);
   }
 
@@ -413,7 +421,13 @@
     }
   }
 
-  function syncPlaybackState(currentTime, duration, isPlaying) {
+  function syncPlaybackState(currentTime, duration, isPlaying, loadedFraction) {
+    // Ignore incoming state if user is currently dragging or within 1000ms after seek
+    if (isUserSeeking || (Date.now() - lastSeekTimestamp < 1000)) {
+      if (typeof isPlaying === 'boolean') updatePlayPauseButtonUI(isPlaying);
+      return;
+    }
+
     currentPlaybackTime = Math.max(0, Number(currentTime) || 0);
     if (Number(duration) > 0) {
       currentTotalDuration = Number(duration);
@@ -430,27 +444,41 @@
     }
 
     if (elements.modalTimeDuration) {
-      elements.modalTimeDuration.textContent = currentTotalDuration > 0 ? formatTime(currentTotalDuration) : '--:--';
+      elements.modalTimeDuration.textContent = currentTotalDuration > 0 ? formatTime(currentTotalDuration) : '0:00';
     }
 
-    if (!isUserSeeking && elements.modalSeekerSlider && currentTotalDuration > 0) {
+    if (currentTotalDuration > 0) {
       const pct = Math.min(100, Math.max(0, (currentPlaybackTime / currentTotalDuration) * 100));
-      elements.modalSeekerSlider.value = pct;
-      if (elements.modalSeekerProgress) {
-        elements.modalSeekerProgress.style.width = pct + '%';
-      }
+      if (elements.ytProgressPlayed) elements.ytProgressPlayed.style.width = pct + '%';
+      if (elements.ytScrubberHandle) elements.ytScrubberHandle.style.left = pct + '%';
+    }
+
+    if (typeof loadedFraction === 'number' && elements.ytProgressBuffer) {
+      elements.ytProgressBuffer.style.width = Math.min(100, Math.max(0, loadedFraction * 100)) + '%';
     }
   }
 
   function performSeek(targetTime) {
+    lastSeekTimestamp = Date.now();
     const validTarget = Math.max(0, Math.min(currentTotalDuration || 36000, targetTime));
     currentPlaybackTime = validTarget;
-    syncPlaybackState(validTarget, currentTotalDuration);
+
+    if (elements.modalTimeCurrent) {
+      elements.modalTimeCurrent.textContent = formatTime(validTarget);
+    }
+
+    if (currentTotalDuration > 0) {
+      const pct = Math.min(100, Math.max(0, (validTarget / currentTotalDuration) * 100));
+      if (elements.ytProgressPlayed) elements.ytProgressPlayed.style.width = pct + '%';
+      if (elements.ytScrubberHandle) elements.ytScrubberHandle.style.left = pct + '%';
+    }
 
     if (currentPlayerMode === 'direct') {
       if (elements.modalVideoPlayer) {
         try {
           elements.modalVideoPlayer.currentTime = validTarget;
+          elements.modalVideoPlayer.play().catch(() => {});
+          updatePlayPauseButtonUI(true);
         } catch (e) {}
       }
     } else if (currentPlayerMode === 'embed') {
@@ -462,6 +490,7 @@
             command: 'seekTo',
             args: [validTarget, true]
           }, '*');
+          updatePlayPauseButtonUI(true);
         } catch (e) {}
       }
     }
@@ -975,29 +1004,60 @@
       });
     });
 
-    // Seeker & Playback Control Events
-    if (elements.modalSeekerSlider) {
-      elements.modalSeekerSlider.addEventListener('input', (e) => {
-        isUserSeeking = true;
-        const pct = Number(e.target.value) || 0;
-        if (elements.modalSeekerProgress) {
-          elements.modalSeekerProgress.style.width = pct + '%';
-        }
-        if (currentTotalDuration > 0) {
-          const previewTime = (pct / 100) * currentTotalDuration;
-          if (elements.modalTimeCurrent) {
-            elements.modalTimeCurrent.textContent = formatTime(previewTime);
-          }
+    // YouTube Scrubber & Playback Control Events
+    if (elements.ytScrubberWrap) {
+      // Hover time preview tooltip
+      elements.ytScrubberWrap.addEventListener('mousemove', (e) => {
+        if (!currentTotalDuration) return;
+        const rect = elements.ytScrubberWrap.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        const hoverSec = pct * currentTotalDuration;
+        if (elements.ytScrubberHoverTime) {
+          elements.ytScrubberHoverTime.style.left = (pct * 100) + '%';
+          elements.ytScrubberHoverTime.style.display = 'block';
+          elements.ytScrubberHoverTime.textContent = formatTime(hoverSec);
         }
       });
 
-      elements.modalSeekerSlider.addEventListener('change', (e) => {
-        const pct = Number(e.target.value) || 0;
-        if (currentTotalDuration > 0) {
-          const targetSec = (pct / 100) * currentTotalDuration;
-          performSeek(targetSec);
+      elements.ytScrubberWrap.addEventListener('mouseleave', () => {
+        if (elements.ytScrubberHoverTime) {
+          elements.ytScrubberHoverTime.style.display = 'none';
         }
-        setTimeout(() => { isUserSeeking = false; }, 200);
+      });
+
+      // Click & Drag seeking
+      elements.ytScrubberWrap.addEventListener('mousedown', (e) => {
+        if (!currentTotalDuration) return;
+        isUserSeeking = true;
+        elements.ytScrubberWrap.classList.add('dragging');
+        const rect = elements.ytScrubberWrap.getBoundingClientRect();
+
+        const updatePosition = (clientX) => {
+          const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+          if (elements.ytProgressPlayed) elements.ytProgressPlayed.style.width = (pct * 100) + '%';
+          if (elements.ytScrubberHandle) elements.ytScrubberHandle.style.left = (pct * 100) + '%';
+          if (elements.modalTimeCurrent) elements.modalTimeCurrent.textContent = formatTime(pct * currentTotalDuration);
+          return pct;
+        };
+
+        updatePosition(e.clientX);
+
+        const onMouseMove = (moveEvent) => {
+          updatePosition(moveEvent.clientX);
+        };
+
+        const onMouseUp = (upEvent) => {
+          window.removeEventListener('mousemove', onMouseMove);
+          window.removeEventListener('mouseup', onMouseUp);
+          elements.ytScrubberWrap.classList.remove('dragging');
+          const finalPct = updatePosition(upEvent.clientX);
+          const targetSec = finalPct * currentTotalDuration;
+          performSeek(targetSec);
+          setTimeout(() => { isUserSeeking = false; }, 350);
+        };
+
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
       });
     }
 
@@ -1017,12 +1077,32 @@
       });
     }
 
+    if (elements.ytVolumeSlider) {
+      elements.ytVolumeSlider.addEventListener('input', (e) => {
+        const val = Number(e.target.value) || 0;
+        if (elements.modalVideoPlayer) {
+          elements.modalVideoPlayer.volume = val;
+          elements.modalVideoPlayer.muted = (val === 0);
+        }
+        if (currentPlayerMode === 'embed' && elements.modalIframe && elements.modalIframe.contentWindow && state.selectedVideo) {
+          elements.modalIframe.contentWindow.postMessage({
+            sidestreamPreviewCommand: 'youtube_embed',
+            videoId: state.selectedVideo.id,
+            command: 'setVolume',
+            args: [val * 100]
+          }, '*');
+        }
+        updateMuteButtonUI(val === 0);
+      });
+    }
+
     if (elements.modalBtnMute) {
       elements.modalBtnMute.addEventListener('click', () => {
         if (currentPlayerMode === 'direct') {
           if (!elements.modalVideoPlayer) return;
           elements.modalVideoPlayer.muted = !elements.modalVideoPlayer.muted;
           updateMuteButtonUI(elements.modalVideoPlayer.muted);
+          if (elements.ytVolumeSlider) elements.ytVolumeSlider.value = elements.modalVideoPlayer.muted ? 0 : 1;
         } else if (currentPlayerMode === 'embed') {
           if (elements.modalIframe && elements.modalIframe.contentWindow && state.selectedVideo) {
             const isMuted = elements.iconVolMute && elements.iconVolMute.style.display !== 'none';
@@ -1034,6 +1114,7 @@
               args: []
             }, '*');
             updateMuteButtonUI(!isMuted);
+            if (elements.ytVolumeSlider) elements.ytVolumeSlider.value = isMuted ? 1 : 0;
           }
         }
       });
@@ -1203,10 +1284,28 @@
       }
     });
 
-    // Close modal on Escape
+    // Keyboard shortcuts while preview modal is open
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && elements.previewModal.classList.contains('active')) {
+      if (!elements.previewModal.classList.contains('active')) return;
+      if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT' || document.activeElement.tagName === 'TEXTAREA')) {
+        if (e.key === 'Escape') closePreviewModal();
+        return;
+      }
+
+      if (e.key === 'Escape') {
         closePreviewModal();
+      } else if (e.key === ' ' || e.key === 'k' || e.key === 'K') {
+        e.preventDefault();
+        togglePlayPause();
+      } else if (e.key === 'ArrowLeft' || e.key === 'j' || e.key === 'J') {
+        e.preventDefault();
+        performSeek(currentPlaybackTime - 10);
+      } else if (e.key === 'ArrowRight' || e.key === 'l' || e.key === 'L') {
+        e.preventDefault();
+        performSeek(currentPlaybackTime + 10);
+      } else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        if (elements.modalBtnMute) elements.modalBtnMute.click();
       }
     });
   }
