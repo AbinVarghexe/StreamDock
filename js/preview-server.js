@@ -93,6 +93,7 @@ function handleDirectStreamRequest(request, response, mediaId, platform = 'youtu
     }
   } else {
     mediaUrl = `https://www.youtube.com/watch?v=${mediaId}`;
+    args.push('--extractor-args', 'youtube:player_client=android,mweb');
     args.push('-f', '18/b/ba/best[ext=mp4]/best');
   }
 
