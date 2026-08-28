@@ -232,9 +232,10 @@ function importFileToPremiere(targetFile, addToTimeline) {
 
 function ensureAEFolder(folderName) {
     if (!folderName) folderName = "StreamDock Downloads";
+    if (!app.project) return null;
     for (var i = 1; i <= app.project.numItems; i++) {
         var item = app.project.item(i);
-        if (item && (item instanceof FolderItem) && item.name === folderName) {
+        if (item && (item instanceof FolderItem || item.typeName === "Folder") && item.name === folderName) {
             return item;
         }
     }
@@ -243,10 +244,14 @@ function ensureAEFolder(folderName) {
 
 function importFileToAfterEffects(targetFile, addToComp) {
     if (!app.project) {
-        return streamdockSerializeResult({
-            success: false,
-            message: "No active project open in After Effects."
-        });
+        try {
+            app.newProject();
+        } catch (e) {
+            return streamdockSerializeResult({
+                success: false,
+                message: "No active project open in After Effects."
+            });
+        }
     }
 
     var importOptions = new ImportOptions(targetFile);
@@ -268,20 +273,36 @@ function importFileToAfterEffects(targetFile, addToComp) {
     }
 
     // Move to "StreamDock Downloads" folder in project panel
-    var folder = ensureAEFolder("StreamDock Downloads");
-    if (folder) {
-        footageItem.parentFolder = folder;
-    }
+    try {
+        var folder = ensureAEFolder("StreamDock Downloads");
+        if (folder) {
+            footageItem.parentFolder = folder;
+        }
+    } catch (fErr) {}
 
-    // If requested and active composition exists, add clip layer at current playhead time
+    // If requested, add clip layer to active composition or first open composition
     var addedToComp = false;
-    if (addToComp && app.project.activeItem && (app.project.activeItem instanceof CompItem)) {
+    if (addToComp) {
         try {
-            var comp = app.project.activeItem;
-            var layer = comp.layers.add(footageItem);
-            if (layer) {
-                layer.startTime = comp.time;
-                addedToComp = true;
+            var comp = null;
+            if (app.project.activeItem && (app.project.activeItem instanceof CompItem || app.project.activeItem.typeName === "Composition")) {
+                comp = app.project.activeItem;
+            } else {
+                for (var k = 1; k <= app.project.numItems; k++) {
+                    var it = app.project.item(k);
+                    if (it && (it instanceof CompItem || it.typeName === "Composition")) {
+                        comp = it;
+                        break;
+                    }
+                }
+            }
+
+            if (comp) {
+                var layer = comp.layers.add(footageItem);
+                if (layer) {
+                    layer.startTime = comp.time;
+                    addedToComp = true;
+                }
             }
         } catch (compErr) {}
     }

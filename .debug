@@ -3,6 +3,7 @@
   <Extension Id="com.streamdock.youtube.downloader.panel">
     <HostList>
       <Host Name="PPRO" Port="8088" />
+      <Host Name="AEFT" Port="8089" />
     </HostList>
   </Extension>
 </ExtensionList>

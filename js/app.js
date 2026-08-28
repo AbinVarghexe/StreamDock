@@ -5,27 +5,79 @@
 (function () {
   'use strict';
 
-  // 1. Resolve Node.js Modules safely
+  // 1. Resolve Node.js Modules safely across Premiere Pro & After Effects
   let path, fs, binaryManager, youtubeSearch, downloader, candidateDiscovery, previewServer, instagramExtractor, sessionManager;
   let isNodeAvailable = false;
+  let extensionBaseDir = '';
+
+  function getResolvedBaseDir() {
+    if (typeof require !== 'function') return '';
+    try {
+      const p = require('path');
+      const f = require('fs');
+
+      // 1. Try csInterface.getSystemPath('extension')
+      if (typeof window !== 'undefined' && window.CSInterface) {
+        try {
+          const csi = new window.CSInterface();
+          if (csi && typeof csi.getSystemPath === 'function') {
+            const extPath = csi.getSystemPath('extension');
+            if (extPath && f.existsSync(p.join(extPath, 'js', 'downloader.js'))) {
+              return extPath;
+            }
+          }
+        } catch (e) {}
+      }
+
+      // 2. Try window.__dirname
+      if (typeof window !== 'undefined' && window.__dirname && f.existsSync(p.join(window.__dirname, 'js', 'downloader.js'))) {
+        return window.__dirname;
+      }
+
+      // 3. Try window.location.pathname
+      if (typeof window !== 'undefined' && window.location && window.location.pathname) {
+        try {
+          let loc = decodeURIComponent(window.location.pathname);
+          loc = loc.replace(/^\/([A-Za-z]:)/, '$1');
+          const dir = p.dirname(loc);
+          if (f.existsSync(p.join(dir, 'js', 'downloader.js'))) {
+            return dir;
+          }
+        } catch (e) {}
+      }
+
+      // 4. Try script tags
+      try {
+        const scriptTag = document.querySelector('script[src*="app.js"]');
+        if (scriptTag && scriptTag.src) {
+          let src = decodeURIComponent(scriptTag.src.replace(/^file:\/\/\/?/, ''));
+          src = src.replace(/^\/([A-Za-z]:)/, '$1');
+          const dir = p.dirname(p.dirname(src));
+          if (f.existsSync(p.join(dir, 'js', 'downloader.js'))) {
+            return dir;
+          }
+        }
+      } catch (e) {}
+
+      return p.resolve('.');
+    } catch (e) {
+      return '';
+    }
+  }
 
   try {
     if (typeof require === 'function') {
       path = require('path');
       fs = require('fs');
+      extensionBaseDir = getResolvedBaseDir();
 
-      // Resolve extension root dynamically
-      const scriptTag = document.querySelector('script[src*="app.js"]');
-      const scriptSrc = scriptTag ? scriptTag.src.replace(/^file:\/\/\/?/, '') : '';
-      const baseDir = scriptSrc ? path.dirname(path.dirname(scriptSrc)) : path.resolve('.');
-
-      binaryManager = require(path.join(baseDir, 'js', 'binary-manager.js'));
-      youtubeSearch = require(path.join(baseDir, 'js', 'youtube-search.js'));
-      downloader = require(path.join(baseDir, 'js', 'downloader.js'));
-      candidateDiscovery = require(path.join(baseDir, 'js', 'download-candidate-discovery.js'));
-      previewServer = require(path.join(baseDir, 'js', 'preview-server.js'));
-      instagramExtractor = require(path.join(baseDir, 'js', 'instagram-extractor.js'));
-      sessionManager = require(path.join(baseDir, 'js', 'session-manager.js'));
+      binaryManager = require(path.join(extensionBaseDir, 'js', 'binary-manager.js'));
+      youtubeSearch = require(path.join(extensionBaseDir, 'js', 'youtube-search.js'));
+      downloader = require(path.join(extensionBaseDir, 'js', 'downloader.js'));
+      candidateDiscovery = require(path.join(extensionBaseDir, 'js', 'download-candidate-discovery.js'));
+      previewServer = require(path.join(extensionBaseDir, 'js', 'preview-server.js'));
+      instagramExtractor = require(path.join(extensionBaseDir, 'js', 'instagram-extractor.js'));
+      sessionManager = require(path.join(extensionBaseDir, 'js', 'session-manager.js'));
       isNodeAvailable = true;
     }
   } catch (err) {
@@ -199,18 +251,18 @@
 
   async function resolveDownloadDestination() {
     if (state.settings.downloadDir && fs && fs.existsSync(state.settings.downloadDir)) {
-      return state.settings.downloadDir;
+      return path.normalize(state.settings.downloadDir);
     }
 
-    // Query active Premiere project directory
+    // Query active Premiere / After Effects project directory
     const res = await evalHostScript('getProjectDirectoryInfo()');
     if (res && res.success && res.directoryPath) {
-      return res.directoryPath;
+      return path.normalize(res.directoryPath);
     }
 
     // Default to OS Downloads or User folder
     if (process && process.env) {
-      return path.join(process.env.USERPROFILE || process.env.HOME || '.', 'Downloads');
+      return path.normalize(path.join(process.env.USERPROFILE || process.env.HOME || '.', 'Downloads'));
     }
 
     return '.';
@@ -804,14 +856,15 @@
 
       showToast(`Download finished: ${video.title.substring(0, 25)}...`, 'success');
 
-      // Auto-import to Premiere Pro if enabled
+      // Auto-import to host application (Premiere Pro / After Effects) if enabled
       if (state.settings.autoImportBin && result.filePath) {
-        showToast('Importing to Premiere Pro bin...');
+        const isAE = (state.hostApp === 'aftereffects');
+        showToast(isAE ? 'Importing to After Effects...' : 'Importing to Premiere Pro bin...');
         const importRes = await evalHostScript(
           `importFileToBin("${result.filePath.replace(/\\/g, '\\\\')}", ${addToTimeline})`
         );
         if (importRes && importRes.success) {
-          showToast('Imported into StreamDock Downloads bin!', 'success');
+          showToast(isAE ? 'Imported to After Effects project folder!' : 'Imported into StreamDock Downloads bin!', 'success');
         } else {
           console.warn('Import failed:', importRes);
         }
@@ -848,24 +901,25 @@
         <span class="download-title" title="${item.video.title}">${item.video.title}</span>
         <span class="download-status-badge downloading status-badge">0%</span>
       </div>
-      <div class="progress-bar-wrap">
-        <div class="progress-bar-fill" style="width: 0%;"></div>
+      <div class="download-progress-bar">
+        <div class="download-progress-fill" style="width: 0%;"></div>
       </div>
-      <div class="download-meta">
-        <span class="meta-speed">Speed: Starting...</span>
-        <span class="meta-eta">ETA: Calculating...</span>
-      </div>
-      <div class="download-actions">
-        <button class="btn-small btn-cancel-dl">Cancel</button>
+      <div class="download-footer">
+        <span class="download-speed">Speed: --</span>
+        <span class="download-eta">ETA: --</span>
+        <div class="download-actions">
+          <button class="btn-small btn-cancel-download">Cancel</button>
+        </div>
       </div>
     `;
 
-    card.querySelector('.btn-cancel-dl').addEventListener('click', () => {
+    card.querySelector('.btn-cancel-download').addEventListener('click', () => {
       if (item.cancellation) {
         item.cancellation.cancel();
-        item.status = 'cancelled';
-        updateDownloadCardUI(item);
       }
+      item.status = 'cancelled';
+      updateDownloadCardUI(item);
+      updateDownloadsBadge();
     });
 
     elements.downloadsList.prepend(card);
@@ -875,33 +929,34 @@
     const card = document.getElementById(`download-card-${item.id}`);
     if (!card) return;
 
-    const fill = card.querySelector('.progress-bar-fill');
-    const badge = card.querySelector('.status-badge');
-    const speedEl = card.querySelector('.meta-speed');
-    const etaEl = card.querySelector('.meta-eta');
+    const badge = card.querySelector('.download-status-badge');
+    const fill = card.querySelector('.download-progress-fill');
+    const speedEl = card.querySelector('.download-speed');
+    const etaEl = card.querySelector('.download-eta');
     const actions = card.querySelector('.download-actions');
-
-    fill.style.width = `${item.percent}%`;
 
     if (item.status === 'downloading') {
       badge.className = 'download-status-badge downloading status-badge';
       badge.textContent = `${item.percent}%`;
+      fill.style.width = `${item.percent}%`;
       speedEl.textContent = `Speed: ${item.speed || '-'}`;
       etaEl.textContent = `ETA: ${item.eta || '-'}`;
     } else if (item.status === 'completed') {
+      const isAE = (state.hostApp === 'aftereffects');
       badge.className = 'download-status-badge completed status-badge';
-      badge.textContent = 'Ready in Premiere';
+      badge.textContent = isAE ? 'Ready in AE' : 'Ready in Premiere';
+      fill.style.width = '100%';
       speedEl.textContent = 'Imported to Project';
       etaEl.textContent = '';
       actions.innerHTML = `
-        <button class="btn-small btn-reimport">Re-import to Bin</button>
+        <button class="btn-small btn-reimport">${isAE ? 'Re-import to AE' : 'Re-import to Bin'}</button>
       `;
       actions.querySelector('.btn-reimport').addEventListener('click', async () => {
         if (item.filePath) {
           const res = await evalHostScript(
             `importFileToBin("${item.filePath.replace(/\\/g, '\\\\')}", false)`
           );
-          if (res && res.success) showToast('Imported to Bin!', 'success');
+          if (res && res.success) showToast(isAE ? 'Imported to AE!' : 'Imported to Bin!', 'success');
         }
       });
     } else if (item.status === 'error' || item.status === 'cancelled') {
@@ -1324,10 +1379,13 @@
       }
     } catch (e) {}
 
+    state.hostApp = host;
+
     evalHostScript('streamdockPing()').then((res) => {
       if (res && res.host) {
         host = res.host;
       }
+      state.hostApp = host;
       applyHostSpecificLabels(host);
     }).catch(() => {
       applyHostSpecificLabels(host);
