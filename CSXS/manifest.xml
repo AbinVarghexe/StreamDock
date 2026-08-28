@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ExtensionManifest Version="10.0"
   ExtensionBundleId="com.streamdock.youtube.downloader"
-  ExtensionBundleVersion="2.0.0"
+  ExtensionBundleVersion="2.1.0"
   ExtensionBundleName="StreamDock YouTube &amp; Instagram Downloader"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <ExtensionList>
-    <Extension Id="com.streamdock.youtube.downloader.panel" Version="2.0.0" />
+    <Extension Id="com.streamdock.youtube.downloader.panel" Version="2.1.0" />
   </ExtensionList>
 
   <ExecutionEnvironment>
     <HostList>
       <Host Name="PPRO" Version="[14.0,99.9]" />
+      <Host Name="AEFT" Version="[17.0,99.9]" />
     </HostList>
     <LocaleList>
       <Locale Code="All" />
@@ -38,7 +39,7 @@
         </Lifecycle>
         <UI>
           <Type>Panel</Type>
-          <Menu>StreamDock (YouTube Downloader)</Menu>
+          <Menu>StreamDock (YouTube &amp; Instagram)</Menu>
           <Geometry>
             <Size>
               <Width>420</Width>

@@ -11,7 +11,7 @@
              img-src 'self' data: blob: https: http:;
              connect-src 'self' https: http: http://127.0.0.1:* http://localhost:*;
              style-src 'self' 'unsafe-inline';" />
-  <title>StreamDock - Premiere Pro Media Downloader</title>
+  <title>StreamDock - Premiere Pro &amp; After Effects Media Downloader</title>
   <link rel="stylesheet" href="./css/main.css" />
 </head>
 <body>
@@ -158,11 +158,11 @@
           </div>
           <label class="form-checkbox-row" style="margin-bottom: 8px;">
             <input type="checkbox" id="setting-auto-import-bin" checked />
-            <span>Automatically import downloaded media into Premiere Bin</span>
+            <span id="setting-auto-import-bin-label">Automatically import downloaded media into Project Bin / Folder</span>
           </label>
           <label class="form-checkbox-row">
             <input type="checkbox" id="setting-auto-insert-timeline" />
-            <span>Automatically insert imported clip onto Timeline playhead</span>
+            <span id="setting-auto-insert-timeline-label">Automatically insert imported clip onto Timeline / Composition</span>
           </label>
         </div>
 
@@ -381,7 +381,7 @@
 
           <label class="form-checkbox-row">
             <input type="checkbox" id="modal-add-to-timeline" />
-            <span>Insert to timeline at playhead when ready</span>
+            <span id="modal-add-to-timeline-label">Insert to timeline / composition at playhead</span>
           </label>
         </div>
 

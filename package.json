@@ -1,7 +1,7 @@
 {
-  "name": "streamdock-premiere-extension",
-  "version": "2.0.0",
-  "description": "Embedded YouTube & Instagram Reel Browser, Search, Preview and Media Downloader for Adobe Premiere Pro",
+  "name": "streamdock-adobe-extension",
+  "version": "2.1.0",
+  "description": "Embedded YouTube & Instagram Reel Browser, Search, Preview and Media Downloader for Adobe Premiere Pro and After Effects",
   "main": "index.html",
   "scripts": {
     "download:binaries": "node scripts/download-binaries.js",
@@ -10,11 +10,14 @@
   },
   "keywords": [
     "premiere-pro",
+    "after-effects",
     "cep",
     "adobe",
     "youtube",
+    "instagram",
     "downloader",
-    "video-editing"
+    "video-editing",
+    "motion-graphics"
   ],
   "author": "StreamDock",
   "license": "MIT"

@@ -1,9 +1,7 @@
 /**
  * StreamDock Host Script (ExtendScript JSX)
- * Bridge between CEP panel and Adobe Premiere Pro DOM
+ * Bridge between CEP panel and Adobe Premiere Pro & Adobe After Effects DOM
  */
-
-#target premierepro
 
 function streamdockEscapeString(value) {
     if (value === undefined || value === null) {
@@ -36,20 +34,63 @@ function streamdockSerializeResult(obj) {
 }
 
 /**
- * Health check to verify connection to Premiere Pro
+ * Detects whether running inside Adobe Premiere Pro, After Effects, or other host
+ */
+function getHostApplication() {
+    try {
+        if (typeof BridgeTalk !== "undefined" && BridgeTalk.appName) {
+            var name = String(BridgeTalk.appName).toLowerCase();
+            if (name.indexOf("aftereffects") !== -1 || name === "aeft") return "aftereffects";
+            if (name.indexOf("premiere") !== -1 || name === "ppro") return "premierepro";
+        }
+        if (typeof app !== "undefined" && app.project) {
+            if (typeof app.project.importFiles !== "undefined") return "premierepro";
+            if (typeof app.project.importFile !== "undefined" || typeof ImportOptions !== "undefined") return "aftereffects";
+        }
+    } catch (e) {}
+    return "unknown";
+}
+
+/**
+ * Health check to verify connection to Premiere Pro or After Effects
  */
 function streamdockPing() {
     try {
+        var host = getHostApplication();
+        var projName = "";
+        var hasProj = false;
+
+        if (host === "aftereffects") {
+            if (app.project) {
+                projName = (app.project.file && app.project.file.name) ? app.project.file.name : (app.project.numItems > 0 ? "Untitled Project" : "");
+                hasProj = !!(app.project.file || app.project.numItems > 0);
+            }
+            return streamdockSerializeResult({
+                success: true,
+                host: "aftereffects",
+                hostDisplay: "Adobe After Effects",
+                message: hasProj ? "After Effects ready: " + projName : "After Effects ready (no project open)",
+                projectName: projName,
+                hasProject: hasProj
+            });
+        }
+
+        // Premiere Pro
         if (app && app.project && app.project.name) {
             return streamdockSerializeResult({
                 success: true,
+                host: "premierepro",
+                hostDisplay: "Adobe Premiere Pro",
                 message: "Premiere ready: " + app.project.name,
                 projectName: app.project.name,
                 hasProject: true
             });
         }
+
         return streamdockSerializeResult({
             success: true,
+            host: "premierepro",
+            hostDisplay: "Adobe Premiere Pro",
             message: "Premiere ready (no project currently open)",
             projectName: "",
             hasProject: false
@@ -63,29 +104,48 @@ function streamdockPing() {
 }
 
 /**
- * Gets project directory info for default download path
+ * Gets project directory info for default download path across Premiere and AE
  */
 function getProjectDirectoryInfo() {
     try {
-        if (!app.project || !app.project.path) {
-            // Fallback to Documents/StreamDock folder if project unsaved
-            var docFolder = Folder.myDocuments.fsName;
+        var host = getHostApplication();
+        var docFolder = Folder.myDocuments ? Folder.myDocuments.fsName : "";
+
+        if (host === "aftereffects") {
+            if (app.project && app.project.file && app.project.file.exists) {
+                return streamdockSerializeResult({
+                    success: true,
+                    directoryPath: app.project.file.parent.fsName,
+                    filePath: app.project.file.fsName,
+                    isSavedProject: true,
+                    message: "Retrieved After Effects project directory"
+                });
+            }
             return streamdockSerializeResult({
                 success: true,
                 directoryPath: docFolder,
                 isSavedProject: false,
-                message: "Using Documents directory (project unsaved)"
+                message: "Using Documents directory (After Effects project unsaved)"
+            });
+        }
+
+        // Premiere Pro
+        if (!app.project || !app.project.path) {
+            return streamdockSerializeResult({
+                success: true,
+                directoryPath: docFolder,
+                isSavedProject: false,
+                message: "Using Documents directory (Premiere project unsaved)"
             });
         }
 
         var projFile = new File(app.project.path);
-        var dirPath = projFile.parent.fsName;
         return streamdockSerializeResult({
             success: true,
-            directoryPath: dirPath,
+            directoryPath: projFile.parent.fsName,
             filePath: projFile.fsName,
             isSavedProject: true,
-            message: "Retrieved project directory"
+            message: "Retrieved Premiere project directory"
         });
     } catch (err) {
         return streamdockSerializeResult({
@@ -95,60 +155,156 @@ function getProjectDirectoryInfo() {
     }
 }
 
-/**
- * Ensures "StreamDock Downloads" bin exists in the project root
- */
-function ensureDownloadsBin(binName) {
+// ─── Premiere Pro Helpers ───────────────────────────────────────────────────
+
+function ensurePremiereDownloadsBin(binName) {
     if (!binName) binName = "StreamDock Downloads";
     var rootItem = app.project.rootItem;
-    
-    // Check if bin already exists
     for (var i = 0; i < rootItem.children.numItems; i++) {
         var item = rootItem.children[i];
         if (item.type === ProjectItemType.BIN && item.name === binName) {
             return item;
         }
     }
-    
-    // Create new bin
     return rootItem.createBin(binName);
 }
 
-/**
- * Captures playback state of the active sequence
- */
-function streamdockCapturePlaybackState() {
-    try {
-        var seq = app.project.activeSequence;
-        if (!seq) {
-            return { available: false, wasPlaying: false };
-        }
-        // In Premiere Pro ExtendScript, playback state check
-        var isPlaying = false;
-        if (typeof seq.getPlayerPosition === "function") {
-            // Position query is reliable
-            isPlaying = true;
-        }
-        return { available: true, wasPlaying: isPlaying };
-    } catch (e) {
-        return { available: false, wasPlaying: false };
+function importFileToPremiere(targetFile, addToTimeline) {
+    if (!app.project) {
+        return streamdockSerializeResult({
+            success: false,
+            message: "No active project open in Premiere Pro."
+        });
     }
+
+    var bin = ensurePremiereDownloadsBin("StreamDock Downloads");
+    var importArray = [targetFile.fsName];
+    var importTarget = bin ? bin : app.project.rootItem;
+
+    var importSuccess = app.project.importFiles(
+        importArray,
+        true, // suppressUI
+        importTarget,
+        false // importAsNumberedStills
+    );
+
+    if (!importSuccess) {
+        return streamdockSerializeResult({
+            success: false,
+            message: "Premiere failed to import file: " + targetFile.name
+        });
+    }
+
+    var addedToSequence = false;
+    if (addToTimeline && app.project.activeSequence) {
+        var activeSeq = app.project.activeSequence;
+        var importedItem = null;
+        for (var j = 0; j < importTarget.children.numItems; j++) {
+            var child = importTarget.children[j];
+            if (child.getMediaPath && child.getMediaPath() === targetFile.fsName) {
+                importedItem = child;
+                break;
+            }
+        }
+
+        if (importedItem) {
+            try {
+                var playheadTime = activeSeq.getPlayerPosition();
+                if (activeSeq.videoTracks && activeSeq.videoTracks.numTracks > 0) {
+                    activeSeq.videoTracks[0].insertClip(importedItem, playheadTime);
+                    addedToSequence = true;
+                }
+            } catch (seqErr) {}
+        }
+    }
+
+    return streamdockSerializeResult({
+        success: true,
+        message: "Successfully imported to StreamDock Downloads bin" + (addedToSequence ? " and timeline" : ""),
+        filePath: targetFile.fsName,
+        fileName: targetFile.name,
+        binName: "StreamDock Downloads",
+        addedToSequence: addedToSequence
+    });
 }
 
+// ─── After Effects Helpers ──────────────────────────────────────────────────
+
+function ensureAEFolder(folderName) {
+    if (!folderName) folderName = "StreamDock Downloads";
+    for (var i = 1; i <= app.project.numItems; i++) {
+        var item = app.project.item(i);
+        if (item && (item instanceof FolderItem) && item.name === folderName) {
+            return item;
+        }
+    }
+    return app.project.items.addFolder(folderName);
+}
+
+function importFileToAfterEffects(targetFile, addToComp) {
+    if (!app.project) {
+        return streamdockSerializeResult({
+            success: false,
+            message: "No active project open in After Effects."
+        });
+    }
+
+    var importOptions = new ImportOptions(targetFile);
+    if (!importOptions.canImportAs(ImportAsType.FOOTAGE)) {
+        return streamdockSerializeResult({
+            success: false,
+            message: "Cannot import file as footage in After Effects: " + targetFile.name
+        });
+    }
+
+    importOptions.importAs = ImportAsType.FOOTAGE;
+    var footageItem = app.project.importFile(importOptions);
+
+    if (!footageItem) {
+        return streamdockSerializeResult({
+            success: false,
+            message: "After Effects failed to import file: " + targetFile.name
+        });
+    }
+
+    // Move to "StreamDock Downloads" folder in project panel
+    var folder = ensureAEFolder("StreamDock Downloads");
+    if (folder) {
+        footageItem.parentFolder = folder;
+    }
+
+    // If requested and active composition exists, add clip layer at current playhead time
+    var addedToComp = false;
+    if (addToComp && app.project.activeItem && (app.project.activeItem instanceof CompItem)) {
+        try {
+            var comp = app.project.activeItem;
+            var layer = comp.layers.add(footageItem);
+            if (layer) {
+                layer.startTime = comp.time;
+                addedToComp = true;
+            }
+        } catch (compErr) {}
+    }
+
+    return streamdockSerializeResult({
+        success: true,
+        message: "Successfully imported to StreamDock Downloads folder" + (addedToComp ? " and active composition" : ""),
+        filePath: targetFile.fsName,
+        fileName: targetFile.name,
+        binName: "StreamDock Downloads",
+        addedToSequence: addedToComp
+    });
+}
+
+// ─── Universal Entry Point ──────────────────────────────────────────────────
+
 /**
- * Imports a downloaded media file into the project bin
+ * Imports a downloaded media file into the project bin / folder
  * @param {string} filePath Absolute path to downloaded media
- * @param {boolean} addToTimeline Whether to insert into active sequence
+ * @param {boolean} addToTimeline Whether to insert into active sequence/composition
  */
 function importFileToBin(filePath, addToTimeline) {
     try {
-        if (!app.project) {
-            return streamdockSerializeResult({
-                success: false,
-                message: "No active project open in Premiere Pro."
-            });
-        }
-
         var targetFile = new File(filePath);
         if (!targetFile.exists) {
             return streamdockSerializeResult({
@@ -157,68 +313,12 @@ function importFileToBin(filePath, addToTimeline) {
             });
         }
 
-        // 1. Ensure Bin exists
-        var bin = ensureDownloadsBin("StreamDock Downloads");
-        
-        // 2. Capture playback state
-        var playbackState = streamdockCapturePlaybackState();
-
-        // 3. Import File
-        var importArray = [targetFile.fsName];
-        var suppressUI = true;
-        var importTarget = bin ? bin : app.project.rootItem;
-        
-        var importSuccess = app.project.importFiles(
-            importArray,
-            suppressUI,
-            importTarget,
-            false // importAsNumberedStills
-        );
-
-        if (!importSuccess) {
-            return streamdockSerializeResult({
-                success: false,
-                message: "Premiere failed to import file: " + targetFile.name
-            });
+        var host = getHostApplication();
+        if (host === "aftereffects") {
+            return importFileToAfterEffects(targetFile, addToTimeline);
+        } else {
+            return importFileToPremiere(targetFile, addToTimeline);
         }
-
-        // 4. If requested and sequence active, add clip to timeline at playhead
-        var addedToSequence = false;
-        if (addToTimeline && app.project.activeSequence) {
-            var activeSeq = app.project.activeSequence;
-            // Find newly imported project item in bin
-            var importedItem = null;
-            for (var j = 0; j < importTarget.children.numItems; j++) {
-                var child = importTarget.children[j];
-                if (child.getMediaPath && child.getMediaPath() === targetFile.fsName) {
-                    importedItem = child;
-                    break;
-                }
-            }
-
-            if (importedItem) {
-                try {
-                    var playheadTime = activeSeq.getPlayerPosition();
-                    // Insert clip into track
-                    if (activeSeq.videoTracks && activeSeq.videoTracks.numTracks > 0) {
-                        activeSeq.videoTracks[0].insertClip(importedItem, playheadTime);
-                        addedToSequence = true;
-                    }
-                } catch (seqErr) {
-                    // Non-fatal if insert to sequence fails
-                }
-            }
-        }
-
-        return streamdockSerializeResult({
-            success: true,
-            message: "Successfully imported to StreamDock Downloads bin" + (addedToSequence ? " and timeline" : ""),
-            filePath: targetFile.fsName,
-            fileName: targetFile.name,
-            binName: "StreamDock Downloads",
-            addedToSequence: addedToSequence
-        });
-
     } catch (err) {
         return streamdockSerializeResult({
             success: false,

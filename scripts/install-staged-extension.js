@@ -53,7 +53,7 @@ function copyDirectoryInPlace(src, dest) {
 }
 
 function installExtension() {
-  console.log('--- Installing StreamDock to Premiere Pro CEP ---');
+  console.log('--- Installing StreamDock to Premiere Pro & After Effects CEP ---');
 
   const appData = process.env.APPDATA;
   if (!appData) {

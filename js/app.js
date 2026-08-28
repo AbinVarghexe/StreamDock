@@ -89,8 +89,8 @@
     modalQualityGroup: document.getElementById('modal-quality-group'),
     modalQualitySelect: document.getElementById('modal-quality-select'),
     modalAudioGroup: document.getElementById('modal-audio-format-group'),
-    modalAudioSelect: document.getElementById('modal-audio-format-select'),
     modalAddToTimeline: document.getElementById('modal-add-to-timeline'),
+    modalAddToTimelineLabel: document.getElementById('modal-add-to-timeline-label'),
     modalCloseBtn: document.getElementById('modal-close-btn'),
     modalCancelBtn: document.getElementById('modal-cancel-btn'),
     modalStartDownloadBtn: document.getElementById('modal-start-download-btn'),
@@ -120,7 +120,9 @@
     settingDefaultQuality: document.getElementById('setting-default-quality'),
     settingDefaultAudioFormat: document.getElementById('setting-default-audio-format'),
     settingAutoImportBin: document.getElementById('setting-auto-import-bin'),
+    settingAutoImportBinLabel: document.getElementById('setting-auto-import-bin-label'),
     settingAutoInsertTimeline: document.getElementById('setting-auto-insert-timeline'),
+    settingAutoInsertTimelineLabel: document.getElementById('setting-auto-insert-timeline-label'),
     settingInstagramCookie: document.getElementById('setting-instagram-cookie'),
     btnSaveInstagramSession: document.getElementById('btn-save-instagram-session'),
     btnClearInstagramSession: document.getElementById('btn-clear-instagram-session'),
@@ -1310,9 +1312,51 @@
     });
   }
 
-  // 14. Initialization
+  // 14. Host Application Detection (Premiere Pro vs After Effects)
+  function detectHostApp() {
+    let host = 'premierepro';
+    try {
+      if (csInterface && typeof csInterface.getHostEnvironment === 'function') {
+        const env = csInterface.getHostEnvironment();
+        if (env && (env.appId === 'AEFT' || env.appId === 'aeft')) {
+          host = 'aftereffects';
+        }
+      }
+    } catch (e) {}
+
+    evalHostScript('streamdockPing()').then((res) => {
+      if (res && res.host) {
+        host = res.host;
+      }
+      applyHostSpecificLabels(host);
+    }).catch(() => {
+      applyHostSpecificLabels(host);
+    });
+  }
+
+  function applyHostSpecificLabels(host) {
+    const isAE = (host === 'aftereffects');
+    if (elements.modalAddToTimelineLabel) {
+      elements.modalAddToTimelineLabel.textContent = isAE
+        ? 'Insert to active composition at playhead'
+        : 'Insert to timeline at playhead when ready';
+    }
+    if (elements.settingAutoImportBinLabel) {
+      elements.settingAutoImportBinLabel.textContent = isAE
+        ? 'Automatically import downloaded media into After Effects project folder'
+        : 'Automatically import downloaded media into Premiere Bin';
+    }
+    if (elements.settingAutoInsertTimelineLabel) {
+      elements.settingAutoInsertTimelineLabel.textContent = isAE
+        ? 'Automatically insert imported clip onto active Composition'
+        : 'Automatically insert imported clip onto Timeline playhead';
+    }
+  }
+
+  // 15. Initialization
   function init() {
     loadSettings();
+    detectHostApp();
     setupEventListeners();
     checkEngineStatus();
 

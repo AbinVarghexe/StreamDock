@@ -11,7 +11,7 @@ const { execSync } = require('child_process');
 const EXTENSION_ID = 'com.streamdock.youtube.downloader';
 const ROOT_DIR = path.resolve(__dirname, '..');
 const DIST_DIR = path.join(ROOT_DIR, 'dist');
-const PACKAGE_NAME = 'StreamDock-v2.0.0-Premiere-Pro-Extension';
+const PACKAGE_NAME = 'StreamDock-v2.1.0-Adobe-Extension';
 const PACKAGE_DIR = path.join(DIST_DIR, PACKAGE_NAME);
 const EXTENSION_PAYLOAD_DIR = path.join(PACKAGE_DIR, 'com.streamdock.youtube.downloader');
 
@@ -45,7 +45,7 @@ function copyRecursive(src, dest, ignoreList = []) {
 
 async function packageExtension() {
   console.log('======================================================');
-  console.log('📦 Packaging StreamDock for Distribution');
+  console.log('📦 Packaging StreamDock for Distribution (Premiere & AE)');
   console.log('======================================================\n');
 
   // Clean and prepare output directories
@@ -64,12 +64,12 @@ async function packageExtension() {
   console.log('2. Creating 1-Click Windows Installer (INSTALL.bat)...');
   const installBatContent = `@echo off
 chcp 65001 >nul
-title StreamDock - Premiere Pro Extension Installer
+title StreamDock - Premiere Pro & After Effects Installer
 color 0A
 
 echo ======================================================
-echo    StreamDock YouTube Importer for Premiere Pro
-echo    1-Click Automated Installer
+echo    StreamDock YouTube & Instagram Downloader
+echo    Adobe Premiere Pro & After Effects Installer
 echo ======================================================
 echo.
 
@@ -83,7 +83,7 @@ reg add "HKCU\\Software\\Adobe\\CSXS.14" /v PlayerDebugMode /t REG_SZ /d 1 /f >n
 reg add "HKCU\\Software\\Adobe\\CSXS.15" /v PlayerDebugMode /t REG_SZ /d 1 /f >nul 2>&1
 reg add "HKCU\\Software\\Adobe\\CSXS.16" /v PlayerDebugMode /t REG_SZ /d 1 /f >nul 2>&1
 reg add "HKCU\\Software\\Adobe\\CSXS.17" /v PlayerDebugMode /t REG_SZ /d 1 /f >nul 2>&1
-echo [OK] Adobe CEP Debug Mode enabled!
+echo [OK] Adobe CEP Debug Mode enabled for Premiere & After Effects!
 echo.
 
 :: 2. Target CEP extensions directory
@@ -111,10 +111,10 @@ echo ======================================================
 echo    SUCCESS! StreamDock is now installed!
 echo ======================================================
 echo.
-echo How to use in Premiere Pro:
-echo   1. Launch or Restart Adobe Premiere Pro
+echo How to use:
+echo   1. Launch or Restart Adobe Premiere Pro or After Effects
 echo   2. In top menu: Window -^> Extensions -^> StreamDock
-echo   3. Search and import YouTube media directly!
+echo   3. Search and import YouTube & Instagram media directly!
 echo.
 pause
 `;
@@ -149,13 +149,14 @@ pause
 
   // 4. Create README.txt
   const readmeContent = `===============================================================
-StreamDock - YouTube Downloader & Importer for Premiere Pro
+StreamDock - YouTube & Instagram Downloader for Premiere & After Effects
 ===============================================================
 
 FEATURES:
-- Search millions of YouTube videos, sound effects & music inside Premiere Pro
-- Live video preview with YouTube embed + direct yt-dlp MP4 stream fallback
-- 1-Click Import directly into Premiere Pro Project Bin & Timeline
+- Search millions of YouTube videos, sound effects & music inside Premiere & AE
+- Download & Preview Instagram Reels with 1-click URL paste
+- Interactive YouTube-style timeline seek slider with hover previews
+- 1-Click Import directly into Project Bin / Folder & Timeline / Active Comp
 - Full HD, 4K, 8K video & MP3, WAV lossless audio extraction
 - Bundled with yt-dlp & FFmpeg media engines (no setup required)
 
@@ -164,7 +165,7 @@ EASY 1-CLICK INSTALLATION:
 ---------------------------------------------------------------
 1. Double-click "INSTALL.bat"
 2. Wait 2 seconds until it says "SUCCESS!"
-3. Open Adobe Premiere Pro
+3. Open Adobe Premiere Pro or Adobe After Effects
 4. Go to: Window -> Extensions -> StreamDock
 
 ---------------------------------------------------------------
@@ -172,6 +173,7 @@ REQUIREMENTS:
 ---------------------------------------------------------------
 - Windows 10 or Windows 11
 - Adobe Premiere Pro CC 2020 through 2026+
+- Adobe After Effects CC 2020 through 2026+
 
 Enjoy creating!
 `;

@@ -5,18 +5,19 @@
   <br/><br/>
 
   [![Adobe Premiere Pro](https://img.shields.io/badge/Adobe%20Premiere%20Pro-CC%202020--2026%2B-9999FF?style=for-the-badge&logo=adobepremierepro&logoColor=white)](https://www.adobe.com/products/premiere.html)
+  [![Adobe After Effects](https://img.shields.io/badge/Adobe%20After%20Effects-CC%202020--2026%2B-9999FF?style=for-the-badge&logo=adobeaftereffects&logoColor=white)](https://www.adobe.com/products/aftereffects.html)
   [![CEP Version](https://img.shields.io/badge/Adobe%20CEP-10.0--17.0-FF0033?style=for-the-badge&logo=adobe&logoColor=white)](https://github.com/Adobe-CEP)
   [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/AbinVarghexe/StreamDock)
   [![License](https://img.shields.io/badge/License-MIT-2ECC71?style=for-the-badge)](LICENSE)
-  [![Release](https://img.shields.io/badge/Release-v2.0.0-E056FD?style=for-the-badge&logo=github)](https://github.com/AbinVarghexe/StreamDock/releases/tag/v2.0.0)
+  [![Release](https://img.shields.io/badge/Release-v2.1.0-E056FD?style=for-the-badge&logo=github)](https://github.com/AbinVarghexe/StreamDock/releases/tag/v2.1.0)
 
   <p align="center">
-    <strong>The ultimate high-speed YouTube browser &amp; Instagram Reel downloader built natively for Adobe Premiere Pro.</strong>
+    <strong>The ultimate high-speed YouTube browser &amp; Instagram Reel downloader built natively for Adobe Premiere Pro &amp; Adobe After Effects.</strong>
   </p>
 
   <p align="center">
     <a href="#-proof-of-work--ui-showcase"><strong>📸 Showcase</strong></a> •
-    <a href="#-whats-new-in-v200"><strong>🚀 What's New</strong></a> •
+    <a href="#-whats-new-in-v210"><strong>🚀 What's New</strong></a> •
     <a href="#-quick-installation-for-users"><strong>⚡ 1-Click Install</strong></a> •
     <a href="#-features--capabilities"><strong>✨ Features</strong></a> •
     <a href="#-user-guide"><strong>📖 User Guide</strong></a> •
@@ -30,11 +31,11 @@
 
 ## 📸 Proof of Work & UI Showcase
 
-### 🎬 Live Adobe Premiere Pro Workspace
+### 🎬 Live Adobe Premiere Pro & After Effects Workspaces
 
 <div align="center">
   <img src="assets/streamdock-premiere-workspace.png" alt="StreamDock Running in Premiere Pro Workspace" width="100%" />
-  <p><em>StreamDock panel docked inside Adobe Premiere Pro alongside the Program Monitor, Project Bins, and active Sequence Timeline.</em></p>
+  <p><em>StreamDock panel docked inside Adobe Premiere Pro &amp; Adobe After Effects alongside Project Bins/Folders and active Timeline/Comp.</em></p>
 </div>
 
 <br/>
@@ -60,7 +61,7 @@
         <td align="center" valign="top">
           <img src="assets/streamdock-downloads-view.png" alt="Active &amp; Completed Downloads" width="100%" />
           <br/><br/>
-          <sub>Real-time progress bars, download speeds, ETA counters, "Ready in Premiere" indicators &amp; 1-click bin re-import</sub>
+          <sub>Real-time progress bars, download speeds, ETA counters, "Ready in Premiere/AE" indicators &amp; 1-click bin re-import</sub>
         </td>
         <td align="center" valign="top">
           <img src="assets/streamdock-settings-view.png" alt="Settings &amp; Binary Engine Status" width="100%" />
@@ -74,16 +75,15 @@
 
 ---
 
-## 🚀 What's New in v2.0.0
+## 🚀 What's New in v2.1.0
 
-StreamDock 2.0 introduces first-class **Instagram Reels & Video** support alongside performance and stability upgrades:
+StreamDock 2.1 introduces **Dual-Host Support for Adobe After Effects** alongside the YouTube Player UI scrubber:
 
-- **📷 Instagram Reels & Posts**: Paste any Instagram Reel (`/reel/`, `/p/`, `/tv/`) to download Full HD MP4 video directly into Premiere Pro.
-- **⚡ Direct CDN Streaming Engine**: Ultra-fast Instagram resolver that extracts high-bitrate MP4 streams directly from Instagram CDN with zero quality loss.
-- **🎬 Dual Preview Player with Auto-Looping**: In-panel video player supports both standard YouTube embeds and native looping direct playback for vertical Instagram Reels.
-- **🔐 Instagram Session Manager**: Dedicated session/cookie storage card in Settings to download age-restricted, high-traffic, or personal account Reels without browser DPAPI lock issues.
-- **🛡️ Isolated Media Pipelines**: YouTube downloads operate directly through native `yt-dlp` without requiring cookies or third-party tokens, keeping both platforms fully independent and reliable.
-- **🎯 Enhanced File Resolver**: Intelligent multi-stage media resolution that handles complex Unicode filenames, emojis, and non-ASCII titles seamlessly on Windows & macOS.
+- **💥 Adobe After Effects Native Support**: Dock StreamDock directly in After Effects (`Window -> Extensions -> StreamDock`). 1-click import into project folders and auto-add footage layers to active compositions (`CompItem`).
+- **🎛️ Authentic YouTube-Style Timeline Scrubber**: Seek to any video timestamp with real-time hover timecode tooltips, buffered track progress, volume hover slider, and keyboard hotkeys (Space, `j`/`l`, `m`).
+- **⚡ HTTP 206 Partial Content Seeking**: Direct stream loopback proxy handles byte-range seek requests with zero playback restarting bugs.
+- **📷 Instagram Reels & Posts (H.264 AVC1 Guaranteed)**: All Instagram downloads are automatically transcoded to standard H.264/AAC MP4, preventing `vp09` codec incompatibilities in both Premiere and After Effects.
+- **🔐 Instagram Session Manager**: Store your session ID safely on your local machine for effortless access to restricted or private reels.
 
 ---
 
@@ -111,10 +111,10 @@ StreamDock 2.0 introduces first-class **Instagram Reels & Video** support alongs
 
 ### ⚡ 1-Click Automated Setup (Windows)
 
-1. Download **[`StreamDock-v2.0.0-Premiere-Pro-Extension.zip`](https://github.com/AbinVarghexe/StreamDock/releases/download/v2.0.0/StreamDock-v2.0.0-Premiere-Pro-Extension.zip)** from GitHub Releases.
+1. Download **[`StreamDock-v2.1.0-Adobe-Extension.zip`](https://github.com/AbinVarghexe/StreamDock/releases/download/v2.1.0/StreamDock-v2.1.0-Adobe-Extension.zip)** from GitHub Releases.
 2. Extract the `.zip` file.
-3. Double-click **`INSTALL.bat`** *(automatically enables Adobe CEP debug mode in Windows registry and deploys extension files)*.
-4. Open (or restart) **Adobe Premiere Pro**.
+3. Double-click **`INSTALL.bat`** *(automatically enables Adobe CEP debug mode in Windows registry and deploys extension files for both Premiere Pro & After Effects)*.
+4. Open (or restart) **Adobe Premiere Pro** or **Adobe After Effects**.
 5. Go to the top menu:
    ```text
    Window ➔ Extensions ➔ StreamDock
