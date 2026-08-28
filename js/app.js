@@ -6,15 +6,18 @@
   'use strict';
 
   // 1. Resolve Node.js Modules safely across Premiere Pro & After Effects
+  const nodeRequire = (typeof window !== 'undefined' && (window.require || (window.cep_node && window.cep_node.require)))
+    || (typeof require === 'function' ? require : null);
+
   let path, fs, binaryManager, youtubeSearch, downloader, candidateDiscovery, previewServer, instagramExtractor, sessionManager;
   let isNodeAvailable = false;
   let extensionBaseDir = '';
 
   function getResolvedBaseDir() {
-    if (typeof require !== 'function') return '';
+    if (!nodeRequire) return '';
     try {
-      const p = require('path');
-      const f = require('fs');
+      const p = nodeRequire('path');
+      const f = nodeRequire('fs');
 
       // 1. Try csInterface.getSystemPath('extension')
       if (typeof window !== 'undefined' && window.CSInterface) {
@@ -29,12 +32,22 @@
         } catch (e) {}
       }
 
-      // 2. Try window.__dirname
-      if (typeof window !== 'undefined' && window.__dirname && f.existsSync(p.join(window.__dirname, 'js', 'downloader.js'))) {
-        return window.__dirname;
+      // 2. Try window.__dirname or window.cep_node.__dirname
+      const winDir = (typeof window !== 'undefined' && (window.__dirname || (window.cep_node && window.cep_node.__dirname)));
+      if (winDir && f.existsSync(p.join(winDir, 'js', 'downloader.js'))) {
+        return winDir;
       }
 
-      // 3. Try window.location.pathname
+      // 3. Try APPDATA standard CEP directory
+      const proc = (typeof process !== 'undefined' ? process : (typeof window !== 'undefined' && window.cep_node && window.cep_node.process));
+      if (proc && proc.env && proc.env.APPDATA) {
+        const appdataDir = p.join(proc.env.APPDATA, 'Adobe', 'CEP', 'extensions', 'com.streamdock.youtube.downloader');
+        if (f.existsSync(p.join(appdataDir, 'js', 'downloader.js'))) {
+          return appdataDir;
+        }
+      }
+
+      // 4. Try window.location.pathname
       if (typeof window !== 'undefined' && window.location && window.location.pathname) {
         try {
           let loc = decodeURIComponent(window.location.pathname);
@@ -46,7 +59,7 @@
         } catch (e) {}
       }
 
-      // 4. Try script tags
+      // 5. Try script tags
       try {
         const scriptTag = document.querySelector('script[src*="app.js"]');
         if (scriptTag && scriptTag.src) {
@@ -66,18 +79,18 @@
   }
 
   try {
-    if (typeof require === 'function') {
-      path = require('path');
-      fs = require('fs');
+    if (nodeRequire) {
+      path = nodeRequire('path');
+      fs = nodeRequire('fs');
       extensionBaseDir = getResolvedBaseDir();
 
-      binaryManager = require(path.join(extensionBaseDir, 'js', 'binary-manager.js'));
-      youtubeSearch = require(path.join(extensionBaseDir, 'js', 'youtube-search.js'));
-      downloader = require(path.join(extensionBaseDir, 'js', 'downloader.js'));
-      candidateDiscovery = require(path.join(extensionBaseDir, 'js', 'download-candidate-discovery.js'));
-      previewServer = require(path.join(extensionBaseDir, 'js', 'preview-server.js'));
-      instagramExtractor = require(path.join(extensionBaseDir, 'js', 'instagram-extractor.js'));
-      sessionManager = require(path.join(extensionBaseDir, 'js', 'session-manager.js'));
+      binaryManager = nodeRequire(path.join(extensionBaseDir, 'js', 'binary-manager.js'));
+      youtubeSearch = nodeRequire(path.join(extensionBaseDir, 'js', 'youtube-search.js'));
+      downloader = nodeRequire(path.join(extensionBaseDir, 'js', 'downloader.js'));
+      candidateDiscovery = nodeRequire(path.join(extensionBaseDir, 'js', 'download-candidate-discovery.js'));
+      previewServer = nodeRequire(path.join(extensionBaseDir, 'js', 'preview-server.js'));
+      instagramExtractor = nodeRequire(path.join(extensionBaseDir, 'js', 'instagram-extractor.js'));
+      sessionManager = nodeRequire(path.join(extensionBaseDir, 'js', 'session-manager.js'));
       isNodeAvailable = true;
     }
   } catch (err) {
@@ -141,6 +154,7 @@
     modalQualityGroup: document.getElementById('modal-quality-group'),
     modalQualitySelect: document.getElementById('modal-quality-select'),
     modalAudioGroup: document.getElementById('modal-audio-format-group'),
+    modalAudioSelect: document.getElementById('modal-audio-format-select'),
     modalAddToTimeline: document.getElementById('modal-add-to-timeline'),
     modalAddToTimelineLabel: document.getElementById('modal-add-to-timeline-label'),
     modalCloseBtn: document.getElementById('modal-close-btn'),
@@ -236,16 +250,35 @@
   }
 
   // 6. ExtendScript Integration Helpers
-  function evalHostScript(code) {
+  function evalHostScript(code, timeoutMs = 2500) {
     return new Promise((resolve) => {
-      csInterface.evalScript(code, (result) => {
-        try {
-          const parsed = JSON.parse(result);
-          resolve(parsed);
-        } catch (e) {
-          resolve({ success: false, raw: result, message: 'Parse error' });
+      let resolved = false;
+      const timer = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          resolve({ success: false, message: 'evalScript timeout' });
         }
-      });
+      }, timeoutMs);
+
+      try {
+        csInterface.evalScript(code, (result) => {
+          if (resolved) return;
+          resolved = true;
+          clearTimeout(timer);
+          try {
+            const parsed = JSON.parse(result);
+            resolve(parsed);
+          } catch (e) {
+            resolve({ success: false, raw: result, message: 'Parse error' });
+          }
+        });
+      } catch (err) {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timer);
+          resolve({ success: false, message: err.message });
+        }
+      }
     });
   }
 
@@ -254,15 +287,21 @@
       return path.normalize(state.settings.downloadDir);
     }
 
-    // Query active Premiere / After Effects project directory
-    const res = await evalHostScript('getProjectDirectoryInfo()');
-    if (res && res.success && res.directoryPath) {
-      return path.normalize(res.directoryPath);
-    }
+    try {
+      // Query active Premiere / After Effects project directory with short timeout
+      const res = await evalHostScript('getProjectDirectoryInfo()', 2000);
+      if (res && res.success && res.directoryPath && fs && fs.existsSync(res.directoryPath)) {
+        return path.normalize(res.directoryPath);
+      }
+    } catch (e) {}
 
     // Default to OS Downloads or User folder
     if (process && process.env) {
-      return path.normalize(path.join(process.env.USERPROFILE || process.env.HOME || '.', 'Downloads'));
+      const defaultDl = path.join(process.env.USERPROFILE || process.env.HOME || '.', 'Downloads');
+      if (fs && !fs.existsSync(defaultDl)) {
+        try { fs.mkdirSync(defaultDl, { recursive: true }); } catch (err) {}
+      }
+      return path.normalize(defaultDl);
     }
 
     return '.';
@@ -608,8 +647,9 @@
   }
 
   async function openPreviewModal(video) {
+    if (!video) return;
     state.selectedVideo = video;
-    elements.modalTitle.textContent = video.title;
+    if (elements.modalTitle) elements.modalTitle.textContent = video.title || 'Media Preview';
     
     resetSeekerUI();
     if (video.duration) {
@@ -619,10 +659,10 @@
       }
     }
 
-    elements.modalQualitySelect.value = state.settings.defaultQuality;
-    elements.modalAudioSelect.value = state.settings.defaultAudioFormat;
-    elements.modalAddToTimeline.checked = state.settings.autoInsertTimeline;
-    elements.previewModal.classList.add('active');
+    if (elements.modalQualitySelect) elements.modalQualitySelect.value = state.settings.defaultQuality || '1080';
+    if (elements.modalAudioSelect) elements.modalAudioSelect.value = state.settings.defaultAudioFormat || 'mp3';
+    if (elements.modalAddToTimeline) elements.modalAddToTimeline.checked = !!state.settings.autoInsertTimeline;
+    if (elements.previewModal) elements.previewModal.classList.add('active');
 
     const currentToken = Date.now();
     previewAbortToken = currentToken;
@@ -806,8 +846,6 @@
     closePreviewModal();
     switchTab('downloads');
 
-    const destDir = await resolveDownloadDestination();
-
     const downloadItem = {
       id: 'dl_' + Date.now(),
       video,
@@ -815,7 +853,7 @@
       quality,
       audioFormat,
       addToTimeline,
-      destDir,
+      destDir: '',
       percent: 0,
       speed: '0 KB/s',
       eta: '--:--',
@@ -829,6 +867,9 @@
 
     try {
       showToast(`Starting download: ${video.title.substring(0, 30)}...`);
+
+      const destDir = await resolveDownloadDestination();
+      downloadItem.destDir = destDir;
 
       const dlRequest = downloader.downloadMedia({
         url: video.url,
@@ -1372,7 +1413,20 @@
   }
 
   // 14. Host Application Detection (Premiere Pro vs After Effects)
-  function detectHostApp() {
+  function loadExtendScript() {
+    if (!csInterface || typeof csInterface.evalScript !== 'function') return Promise.resolve();
+    try {
+      const scriptPath = path ? path.join(extensionBaseDir, 'jsx', 'hostscript.jsx').replace(/\\/g, '/') : '';
+      if (scriptPath) {
+        return new Promise((resolve) => {
+          csInterface.evalScript(`$.evalFile("${scriptPath}")`, () => resolve());
+        });
+      }
+    } catch (e) {}
+    return Promise.resolve();
+  }
+
+  async function detectHostApp() {
     let host = 'premierepro';
     try {
       if (csInterface && typeof csInterface.getHostEnvironment === 'function') {
@@ -1385,15 +1439,17 @@
 
     state.hostApp = host;
 
-    evalHostScript('streamdockPing()').then((res) => {
+    await loadExtendScript();
+
+    try {
+      const res = await evalHostScript('streamdockPing()');
       if (res && res.host) {
         host = res.host;
       }
       state.hostApp = host;
-      applyHostSpecificLabels(host);
-    }).catch(() => {
-      applyHostSpecificLabels(host);
-    });
+    } catch (e) {}
+
+    applyHostSpecificLabels(host);
   }
 
   function applyHostSpecificLabels(host) {

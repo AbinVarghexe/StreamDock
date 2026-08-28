@@ -10,8 +10,9 @@ const { execSync } = require('child_process');
 
 const EXTENSION_ID = 'com.streamdock.youtube.downloader';
 const ROOT_DIR = path.resolve(__dirname, '..');
+const pkg = require(path.join(ROOT_DIR, 'package.json'));
 const DIST_DIR = path.join(ROOT_DIR, 'dist');
-const PACKAGE_NAME = 'StreamDock-v2.1.0-Adobe-Extension';
+const PACKAGE_NAME = `StreamDock-v${pkg.version}-Adobe-Extension`;
 const PACKAGE_DIR = path.join(DIST_DIR, PACKAGE_NAME);
 const EXTENSION_PAYLOAD_DIR = path.join(PACKAGE_DIR, 'com.streamdock.youtube.downloader');
 

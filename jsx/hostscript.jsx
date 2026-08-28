@@ -38,14 +38,32 @@ function streamdockSerializeResult(obj) {
  */
 function getHostApplication() {
     try {
+        // 1. Check unique global ExtendScript constructors / types
+        if (typeof ImportOptions !== "undefined" || typeof CompItem !== "undefined" || typeof FolderItem !== "undefined") {
+            return "aftereffects";
+        }
+        if (typeof ProjectItemType !== "undefined") {
+            return "premierepro";
+        }
+
+        // 2. Check BridgeTalk
         if (typeof BridgeTalk !== "undefined" && BridgeTalk.appName) {
             var name = String(BridgeTalk.appName).toLowerCase();
-            if (name.indexOf("aftereffects") !== -1 || name === "aeft") return "aftereffects";
-            if (name.indexOf("premiere") !== -1 || name === "ppro") return "premierepro";
+            if (name.indexOf("aftereffects") !== -1 || name.indexOf("aeft") !== -1) return "aftereffects";
+            if (name.indexOf("premiere") !== -1 || name.indexOf("ppro") !== -1) return "premierepro";
         }
-        if (typeof app !== "undefined" && app.project) {
-            if (typeof app.project.importFiles !== "undefined") return "premierepro";
-            if (typeof app.project.importFile !== "undefined" || typeof ImportOptions !== "undefined") return "aftereffects";
+
+        // 3. Check app properties
+        if (typeof app !== "undefined") {
+            if (app.appName) {
+                var appN = String(app.appName).toLowerCase();
+                if (appN.indexOf("after effects") !== -1) return "aftereffects";
+                if (appN.indexOf("premiere") !== -1) return "premierepro";
+            }
+            if (app.project) {
+                if (typeof app.project.importFiles !== "undefined") return "premierepro";
+                if (typeof app.project.importFile !== "undefined") return "aftereffects";
+            }
         }
     } catch (e) {}
     return "unknown";
@@ -162,7 +180,8 @@ function ensurePremiereDownloadsBin(binName) {
     var rootItem = app.project.rootItem;
     for (var i = 0; i < rootItem.children.numItems; i++) {
         var item = rootItem.children[i];
-        if (item.type === ProjectItemType.BIN && item.name === binName) {
+        var isBin = (typeof ProjectItemType !== "undefined" && typeof ProjectItemType.BIN !== "undefined") ? (item.type === ProjectItemType.BIN) : (item.type === 2);
+        if (isBin && item.name === binName) {
             return item;
         }
     }

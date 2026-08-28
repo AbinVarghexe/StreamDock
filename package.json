@@ -1,6 +1,6 @@
 {
   "name": "streamdock-adobe-extension",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "description": "Embedded YouTube & Instagram Reel Browser, Search, Preview and Media Downloader for Adobe Premiere Pro and After Effects",
   "main": "index.html",
   "scripts": {

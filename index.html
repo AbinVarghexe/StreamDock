@@ -405,6 +405,20 @@
   </div>
 
   <!-- Scripts -->
+  <script>
+    // Ensure Node.js globals are accessible across all Adobe CEP hosts (Premiere Pro & After Effects)
+    if (typeof window !== 'undefined') {
+      var _nodeReq = window.require || (window.cep_node && window.cep_node.require);
+      if (_nodeReq && !window.require) {
+        window.require = _nodeReq;
+      }
+      if (window.cep_node) {
+        if (!window.process && window.cep_node.process) window.process = window.cep_node.process;
+        if (!window.Buffer && window.cep_node.Buffer) window.Buffer = window.cep_node.Buffer;
+        if (!window.__dirname && window.cep_node.__dirname) window.__dirname = window.cep_node.__dirname;
+      }
+    }
+  </script>
   <script src="./lib/CSInterface.js"></script>
   <script src="./js/app.js"></script>
 </body>
