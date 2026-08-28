@@ -8,8 +8,22 @@ const { execFile, execSync } = require('child_process');
 
 function getExtensionRoot() {
   if (typeof __dirname !== 'undefined') {
-    return path.resolve(__dirname, '..');
+    let d = __dirname;
+    try { d = decodeURIComponent(d); } catch (e) {}
+    d = d.replace(/^\/([A-Za-z]:)/, '$1');
+    const root = path.resolve(d, '..');
+    if (fs.existsSync(path.join(root, 'binaries'))) {
+      return root;
+    }
   }
+
+  if (process.env && process.env.APPDATA) {
+    const extDir = path.join(process.env.APPDATA, 'Adobe', 'CEP', 'extensions', 'com.streamdock.youtube.downloader');
+    if (fs.existsSync(path.join(extDir, 'binaries'))) {
+      return extDir;
+    }
+  }
+
   return path.resolve('.');
 }
 
@@ -23,6 +37,12 @@ function getYtDlpPath() {
 
   const unixBundled = path.join(BINARIES_DIR, 'yt-dlp');
   if (fs.existsSync(unixBundled)) return unixBundled;
+
+  // Check CEP APPDATA folder directly
+  if (process.env && process.env.APPDATA) {
+    const appdataBundled = path.join(process.env.APPDATA, 'Adobe', 'CEP', 'extensions', 'com.streamdock.youtube.downloader', 'binaries', 'yt-dlp.exe');
+    if (fs.existsSync(appdataBundled)) return appdataBundled;
+  }
 
   // 2. Check user's designated bin directory
   const userDevBin = 'D:\\DEV\\Adobe Plugins\\bin\\yt-dlp.exe';
@@ -58,6 +78,12 @@ function getFfmpegPath() {
   const bundledWin = path.join(BINARIES_DIR, 'ffmpeg', 'win32-x64', 'ffmpeg.exe');
   if (fs.existsSync(bundledWin)) return bundledWin;
 
+  // Check CEP APPDATA folder directly
+  if (process.env && process.env.APPDATA) {
+    const appdataBundled = path.join(process.env.APPDATA, 'Adobe', 'CEP', 'extensions', 'com.streamdock.youtube.downloader', 'binaries', 'ffmpeg.exe');
+    if (fs.existsSync(appdataBundled)) return appdataBundled;
+  }
+
   // 2. Check user's designated bin directory
   const userDevBin = 'D:\\DEV\\Adobe Plugins\\bin\\ffmpeg.exe';
   if (fs.existsSync(userDevBin)) return userDevBin;
@@ -89,6 +115,11 @@ function getFfprobePath() {
 
   const bundledRoot = path.join(BINARIES_DIR, 'ffprobe.exe');
   if (fs.existsSync(bundledRoot)) return bundledRoot;
+
+  if (process.env && process.env.APPDATA) {
+    const appdataBundled = path.join(process.env.APPDATA, 'Adobe', 'CEP', 'extensions', 'com.streamdock.youtube.downloader', 'binaries', 'ffprobe.exe');
+    if (fs.existsSync(appdataBundled)) return appdataBundled;
+  }
 
   const userDevBin = 'D:\\DEV\\Adobe Plugins\\bin\\ffprobe.exe';
   if (fs.existsSync(userDevBin)) return userDevBin;

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ExtensionManifest Version="10.0"
+<ExtensionManifest Version="9.0"
   ExtensionBundleId="com.streamdock.youtube.downloader"
   ExtensionBundleVersion="2.1.0"
   ExtensionBundleName="StreamDock YouTube &amp; Instagram Downloader"
@@ -11,13 +11,13 @@
   <ExecutionEnvironment>
     <HostList>
       <Host Name="PPRO" Version="[14.0,99.9]" />
-      <Host Name="AEFT" Version="[17.0,99.9]" />
+      <Host Name="AEFT" Version="[16.0,99.9]" />
     </HostList>
     <LocaleList>
       <Locale Code="All" />
     </LocaleList>
     <RequiredRuntimeList>
-      <RequiredRuntime Name="CSXS" Version="10.0" />
+      <RequiredRuntime Name="CSXS" Version="9.0" />
     </RequiredRuntimeList>
   </ExecutionEnvironment>
 
@@ -32,6 +32,9 @@
             <Parameter>--mixed-context</Parameter>
             <Parameter>--allow-file-access</Parameter>
             <Parameter>--allow-file-access-from-files</Parameter>
+            <Parameter>--autoplay-policy=no-user-gesture-required</Parameter>
+            <Parameter>--disable-web-security</Parameter>
+            <Parameter>--disable-features=BlockInsecurePrivateNetworkRequests</Parameter>
           </CEFCommandLine>
         </Resources>
         <Lifecycle>

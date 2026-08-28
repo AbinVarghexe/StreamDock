@@ -402,16 +402,22 @@ function handleRequest(request, response) {
 
 // ─── Server Lifecycle ────────────────────────────────────────────────────────
 
+let previewServerStartingPromise = null;
+
 function startPreviewBridgeServer() {
-  if (previewBridgeServer) {
+  if (previewBridgeOrigin) {
     return Promise.resolve(previewBridgeOrigin);
   }
+  if (previewServerStartingPromise) {
+    return previewServerStartingPromise;
+  }
 
-  return new Promise((resolve) => {
+  previewServerStartingPromise = new Promise((resolve) => {
     previewBridgeServer = http.createServer(handleRequest);
 
     previewBridgeServer.on('error', (err) => {
       console.warn('Preview bridge server error:', err);
+      previewServerStartingPromise = null;
       resolve('');
     });
 
@@ -424,6 +430,8 @@ function startPreviewBridgeServer() {
       resolve(previewBridgeOrigin);
     });
   });
+
+  return previewServerStartingPromise;
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────────

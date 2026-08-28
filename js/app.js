@@ -670,6 +670,10 @@
     elements.modalVideoPlayer.poster = video.thumbnail;
     elements.modalVideoPlayer.src = '';
 
+    if (previewServer && previewServer.startPreviewBridgeServer) {
+      await previewServer.startPreviewBridgeServer().catch(() => {});
+    }
+
     if (previewServer && previewServer.getPreviewUrl) {
       elements.modalIframe.src = previewServer.getPreviewUrl(video.id);
     } else {

@@ -13,7 +13,7 @@ const SOURCE_DIR = path.resolve(__dirname, '..');
 
 function enablePlayerDebugMode() {
   console.log('--- Enabling CEP PlayerDebugMode ---');
-  const csxsVersions = [10, 11, 12, 13, 14, 15, 16];
+  const csxsVersions = [9, 10, 11, 12, 13, 14, 15, 16, 17];
   for (const v of csxsVersions) {
     try {
       execSync(`reg add "HKCU\\Software\\Adobe\\CSXS.${v}" /v PlayerDebugMode /t REG_SZ /d 1 /f`, { stdio: 'ignore' });
